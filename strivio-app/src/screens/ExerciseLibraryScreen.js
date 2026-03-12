@@ -1,9 +1,20 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
-import { exerciseDatabase as exercises } from '../data/exerciseDatabase';
+import { exerciseDatabase as localExercises } from '../data/exerciseDatabase';
+import api from '../services/api';
 
 export default function ExerciseLibraryScreen({ navigation }) {
+  const [exercises, setExercises] = useState(localExercises);
+
+  useEffect(() => {
+    api.getExercises().then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        setExercises(data.map(e => ({ ...e, id: e._id || e.id })));
+      }
+    }).catch(() => {});
+  }, []);
+
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.scroll}>
@@ -11,15 +22,9 @@ export default function ExerciseLibraryScreen({ navigation }) {
         <Text style={s.subtitle}>Master Every Movement</Text>
 
         {exercises.map((ex) => (
-          <TouchableOpacity
-            key={ex.id}
-            style={s.card}
-            onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: ex.id })}
-          >
+          <TouchableOpacity key={ex.id || ex._id} style={s.card} onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: ex.id || ex._id })}>
             <View style={s.cardRow}>
-              <View style={s.iconBox}>
-                <Text style={s.icon}>🏋️</Text>
-              </View>
+              <View style={s.iconBox}><Text style={s.icon}>🏋️</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardTitle}>{ex.name}</Text>
                 <Text style={s.cardMuscles}>{ex.targetMuscles.join(' • ')}</Text>

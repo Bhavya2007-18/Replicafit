@@ -1,55 +1,92 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 export default function GoalTrackingScreen({ navigation }) {
+  const { user } = useAuth();
+  const [progress, setProgress] = useState(null);
+  const [sessions, setSessions] = useState([]);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const p = await api.getProgress();
+      if (p) setProgress(p);
+      const s = await api.getWorkoutSessions();
+      if (Array.isArray(s)) setSessions(s);
+    } catch (e) { }
+  };
+
+  const goal = user?.profile?.goal || 'muscle_gain';
+  const goalLabel = goal.replace('_', ' ').toUpperCase();
+
+  // Calculate goal-specific targets
+  const weeklyTarget = 5;
+  const weekSessions = sessions.filter(s => (Date.now() - new Date(s.completedAt).getTime()) < 7 * 86400000).length;
+  const weekProgress = Math.min(100, Math.round((weekSessions / weeklyTarget) * 100));
+
+  const monthSessions = sessions.filter(s => (Date.now() - new Date(s.completedAt).getTime()) < 30 * 86400000).length;
+  const monthTarget = 20;
+  const monthProgress = Math.min(100, Math.round((monthSessions / monthTarget) * 100));
+
+  const accuracyTarget = 80;
+  const accuracyProgress = Math.min(100, Math.round(((progress?.avgAccuracy || 0) / accuracyTarget) * 100));
+
+  const goals = [
+    { title: 'Weekly Workouts', current: weekSessions, target: weeklyTarget, progress: weekProgress, icon: '📅' },
+    { title: 'Monthly Workouts', current: monthSessions, target: monthTarget, progress: monthProgress, icon: '📆' },
+    { title: 'Form Accuracy', current: `${progress?.avgAccuracy || 0}%`, target: `${accuracyTarget}%`, progress: accuracyProgress, icon: '🎯' },
+    { title: 'Workout Streak', current: progress?.streak || 0, target: '30 days', progress: Math.min(100, Math.round(((progress?.streak || 0) / 30) * 100)), icon: '🔥' },
+  ];
+
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.scroll}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={s.back}>← Back</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={s.back}>← Back</Text></TouchableOpacity>
         <Text style={s.title}>Goal Tracking</Text>
 
-        {/* Overall Progress */}
-        <View style={s.progressCard}>
-          <Text style={s.progressLabel}>Overall Progress</Text>
-          <Text style={s.progressSub}>Active Goals</Text>
-          <Text style={s.milestone}>Next milestone: 2 days</Text>
-          <View style={s.barBg}><View style={[s.barFill, { width: '65%' }]} /></View>
+        {/* Active Goal Banner */}
+        <View style={s.banner}>
+          <Text style={s.bannerLabel}>ACTIVE GOAL</Text>
+          <Text style={s.bannerGoal}>{goalLabel}</Text>
+          <Text style={s.bannerSub}>Level {progress?.level || 1} • {progress?.xp || 0} XP</Text>
         </View>
 
-        <Text style={s.section}>Active Goals</Text>
-
-        {/* Goal 1 */}
-        <View style={s.goalCard}>
-          <View style={s.goalRow}>
-            <Text style={s.goalTitle}>Lose 8 kg</Text>
-            <View style={s.badge}><Text style={s.badgeText}>In Progress</Text></View>
+        {/* Goal Cards */}
+        {goals.map((g, i) => (
+          <View key={i} style={s.goalCard}>
+            <View style={s.goalHeader}>
+              <Text style={s.goalIcon}>{g.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.goalTitle}>{g.title}</Text>
+                <Text style={s.goalMeta}>{g.current} / {g.target}</Text>
+              </View>
+              <Text style={s.goalPercent}>{g.progress}%</Text>
+            </View>
+            <View style={s.barBg}>
+              <View style={[s.barFill, { width: `${g.progress}%` }, g.progress >= 100 && s.barComplete]} />
+            </View>
           </View>
-          <Text style={s.goalTarget}>Target: 75 kg • Dec 31, 2023</Text>
-          <View style={s.miniBar}><View style={[s.miniBarFill, { width: '40%' }]} /></View>
-        </View>
+        ))}
 
-        {/* Goal 2 */}
-        <View style={s.goalCard}>
-          <View style={s.goalRow}>
-            <Text style={s.goalTitle}>Complete 100 workouts</Text>
-            <View style={s.badge}><Text style={s.badgeText}>In Progress</Text></View>
-          </View>
-          <Text style={s.goalTarget}>Target: 100 sessions • Oct 15, 2023</Text>
-          <View style={s.miniBar}><View style={[s.miniBarFill, { width: '82%' }]} /></View>
-        </View>
-
-        {/* Goal 3 - Completed */}
-        <View style={[s.goalCard, s.goalDone]}>
-          <View style={s.goalRow}>
-            <Text style={s.goalTitle}>Drink 2L Water Daily</Text>
-            <View style={s.badgeDone}><Text style={s.badgeDoneText}>Completed</Text></View>
-          </View>
-          <Text style={s.goalTarget}>30 Day Challenge</Text>
-          <View style={s.miniBar}><View style={[s.miniBarFill, s.miniBarDone, { width: '100%' }]} /></View>
-        </View>
+        {/* Recent Activity */}
+        {sessions.length > 0 && (
+          <>
+            <Text style={s.section}>Recent Activity</Text>
+            {sessions.slice(0, 5).map((session, i) => (
+              <View key={i} style={s.activityRow}>
+                <Text style={s.activityDate}>{new Date(session.completedAt).toLocaleDateString()}</Text>
+                <Text style={s.activityExercise}>{session.exercises?.[0]?.name || 'Workout'}</Text>
+                <Text style={s.activityAccuracy}>{session.totalAccuracy}%</Text>
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -59,24 +96,23 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { padding: SPACING.xl },
   back: { color: COLORS.primary, fontSize: FONT.sizes.md, marginBottom: SPACING.lg },
-  title: { fontSize: FONT.sizes.xxxl, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.xxl },
-  progressCard: { backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.xl, borderWidth: 1, borderColor: COLORS.primary, marginBottom: SPACING.xxl },
-  progressLabel: { fontSize: FONT.sizes.xl, ...FONT.bold, color: COLORS.textPrimary },
-  progressSub: { fontSize: FONT.sizes.md, color: COLORS.textSecondary, marginTop: 4 },
-  milestone: { fontSize: FONT.sizes.sm, color: COLORS.primary, ...FONT.semibold, marginTop: SPACING.md, marginBottom: SPACING.md },
-  barBg: { height: 8, backgroundColor: COLORS.borderLight, borderRadius: RADIUS.round, overflow: 'hidden' },
-  barFill: { height: '100%', backgroundColor: COLORS.primary },
-  section: { fontSize: FONT.sizes.xl, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.lg },
-  goalCard: { backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.xl, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.lg },
-  goalDone: { borderColor: COLORS.success, opacity: 0.85 },
-  goalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-  goalTitle: { fontSize: FONT.sizes.lg, ...FONT.bold, color: COLORS.textPrimary, flex: 1 },
-  badge: { backgroundColor: COLORS.primaryMuted, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.md },
-  badgeText: { color: COLORS.primary, fontSize: FONT.sizes.xs, ...FONT.bold, textTransform: 'uppercase' },
-  badgeDone: { backgroundColor: COLORS.successMuted, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: RADIUS.md },
-  badgeDoneText: { color: COLORS.success, fontSize: FONT.sizes.xs, ...FONT.bold, textTransform: 'uppercase' },
-  goalTarget: { fontSize: FONT.sizes.sm, color: COLORS.textSecondary, marginBottom: SPACING.md },
-  miniBar: { height: 6, backgroundColor: COLORS.borderLight, borderRadius: RADIUS.round, overflow: 'hidden' },
-  miniBarFill: { height: '100%', backgroundColor: COLORS.primary },
-  miniBarDone: { backgroundColor: COLORS.success },
+  title: { fontSize: FONT.sizes.xxl, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.xl },
+  banner: { backgroundColor: COLORS.primaryMuted, borderRadius: RADIUS.md, padding: SPACING.xxl, alignItems: 'center', borderWidth: 1, borderColor: COLORS.primary, marginBottom: SPACING.xxl },
+  bannerLabel: { fontSize: FONT.sizes.xs, color: COLORS.primary, ...FONT.semibold, letterSpacing: 2 },
+  bannerGoal: { fontSize: FONT.sizes.xxxl, ...FONT.bold, color: COLORS.primary, marginTop: SPACING.xs },
+  bannerSub: { fontSize: FONT.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
+  goalCard: { backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md },
+  goalHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
+  goalIcon: { fontSize: 28, marginRight: SPACING.md },
+  goalTitle: { fontSize: FONT.sizes.md, ...FONT.bold, color: COLORS.textPrimary },
+  goalMeta: { fontSize: FONT.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
+  goalPercent: { fontSize: FONT.sizes.lg, ...FONT.bold, color: COLORS.primary },
+  barBg: { height: 6, backgroundColor: COLORS.borderLight, borderRadius: RADIUS.round, overflow: 'hidden' },
+  barFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: RADIUS.round },
+  barComplete: { backgroundColor: COLORS.success },
+  section: { fontSize: FONT.sizes.xl, ...FONT.bold, color: COLORS.textPrimary, marginTop: SPACING.xxl, marginBottom: SPACING.lg },
+  activityRow: { flexDirection: 'row', justifyContent: 'space-between', padding: SPACING.md, backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border },
+  activityDate: { fontSize: FONT.sizes.sm, color: COLORS.textSecondary },
+  activityExercise: { fontSize: FONT.sizes.sm, ...FONT.semibold, color: COLORS.textPrimary },
+  activityAccuracy: { fontSize: FONT.sizes.sm, ...FONT.bold, color: COLORS.primary },
 });

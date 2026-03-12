@@ -1,6 +1,11 @@
 import { registerRootComponent } from 'expo';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+
+import LoginScreen from './src/screens/LoginScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 import HomeDashboardScreen from './src/screens/HomeDashboardScreen';
 import WorkoutPlansScreen from './src/screens/WorkoutPlansScreen';
 import ExerciseLibraryScreen from './src/screens/ExerciseLibraryScreen';
@@ -16,34 +21,56 @@ import SettingsScreen from './src/screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
-function App() {
+function AppNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#d4af35" />
+      </View>
+    );
+  }
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator 
-        initialRouteName="HomeDashboard"
-        screenOptions={{
-          headerStyle: { backgroundColor: '#0a0a0a' },
-          headerTintColor: '#d4af35',
-          headerTitleStyle: { fontWeight: 'bold', color: '#ffffff' },
-          headerShadowVisible: false,
-        }}
-      >
-        <Stack.Screen name="HomeDashboard" component={HomeDashboardScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="WorkoutPlans" component={WorkoutPlansScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="GuidedWorkout" component={GuidedWorkoutScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="DietGuidelines" component={DietGuidelinesScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="GoalTracking" component={GoalTrackingScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="AICoachChat" component={AICoachChatScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Community" component={CommunityScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!user ? (
+        <Stack.Screen name="Login" component={LoginScreen} />
+      ) : !user.onboardingComplete ? (
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      ) : (
+        <>
+          <Stack.Screen name="HomeDashboard" component={HomeDashboardScreen} />
+          <Stack.Screen name="WorkoutPlans" component={WorkoutPlansScreen} />
+          <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
+          <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
+          <Stack.Screen name="GuidedWorkout" component={GuidedWorkoutScreen} />
+          <Stack.Screen name="DietGuidelines" component={DietGuidelinesScreen} />
+          <Stack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
+          <Stack.Screen name="GoalTracking" component={GoalTrackingScreen} />
+          <Stack.Screen name="AICoachChat" component={AICoachChatScreen} />
+          <Stack.Screen name="Achievements" component={AchievementsScreen} />
+          <Stack.Screen name="Community" component={CommunityScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+        </>
+      )}
+    </Stack.Navigator>
   );
 }
+
+function App() {
+  return (
+    <AuthProvider>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    </AuthProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
+});
 
 export default App;
 registerRootComponent(App);

@@ -1,25 +1,31 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import BottomNavBar from '../components/BottomNavBar';
+import api from '../services/api';
 
 export default function ProgressDashboardScreen({ navigation }) {
+  const [progress, setProgress] = useState(null);
+
+  useEffect(() => {
+    api.getProgress().then(setProgress).catch(console.log);
+  }, []);
+
+  const p = progress || {};
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const weekData = [85, 92, 0, 88, 91, 0, 87];
-  const maxVal = Math.max(...weekData);
+  const weekData = (p.weeklyData || []).map(w => w.accuracy || 0);
+  while (weekData.length < 7) weekData.push(0);
 
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.scroll}>
         <Text style={s.title}>Progress Analytics</Text>
 
-        {/* Current Streak */}
         <View style={s.streakCard}>
-          <Text style={s.streakValue}>12</Text>
+          <Text style={s.streakValue}>{p.streak || 0}</Text>
           <Text style={s.streakLabel}>Day Streak 🔥</Text>
         </View>
 
-        {/* Weekly Accuracy */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Weekly AI Accuracy</Text>
           <View style={s.barChart}>
@@ -33,32 +39,11 @@ export default function ProgressDashboardScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Stats Grid */}
         <View style={s.statsGrid}>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>47</Text>
-            <Text style={s.statLabel}>Total Workouts</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>89%</Text>
-            <Text style={s.statLabel}>Avg Accuracy</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>2,450</Text>
-            <Text style={s.statLabel}>Total XP</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>15h</Text>
-            <Text style={s.statLabel}>Total Time</Text>
-          </View>
-        </View>
-
-        {/* PR Section */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Personal Records</Text>
-          <View style={s.prRow}><Text style={s.prName}>Best Squat Accuracy</Text><Text style={s.prVal}>97%</Text></View>
-          <View style={s.prRow}><Text style={s.prName}>Longest Streak</Text><Text style={s.prVal}>18 days</Text></View>
-          <View style={s.prRow}><Text style={s.prName}>Most Reps (Pushups)</Text><Text style={s.prVal}>42</Text></View>
+          <View style={s.statCard}><Text style={s.statValue}>{p.totalWorkouts || 0}</Text><Text style={s.statLabel}>Total Workouts</Text></View>
+          <View style={s.statCard}><Text style={s.statValue}>{p.avgAccuracy || 0}%</Text><Text style={s.statLabel}>Avg Accuracy</Text></View>
+          <View style={s.statCard}><Text style={s.statValue}>{p.xp || 0}</Text><Text style={s.statLabel}>Total XP</Text></View>
+          <View style={s.statCard}><Text style={s.statValue}>{Math.round((p.totalDuration || 0) / 60)}m</Text><Text style={s.statLabel}>Total Time</Text></View>
         </View>
       </ScrollView>
       <BottomNavBar navigation={navigation} activeRoute="ProgressDashboard" />
@@ -85,7 +70,4 @@ const s = StyleSheet.create({
   statCard: { width: '47%', backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   statValue: { fontSize: FONT.sizes.xxl, ...FONT.bold, color: COLORS.primary },
   statLabel: { fontSize: FONT.sizes.xs, color: COLORS.textSecondary, marginTop: 4 },
-  prRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  prName: { fontSize: FONT.sizes.md, color: COLORS.textSecondary },
-  prVal: { fontSize: FONT.sizes.md, ...FONT.bold, color: COLORS.primary },
 });
