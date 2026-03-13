@@ -2,10 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Auto-detect: web uses localhost, device/emulator uses LAN IP
-// CHANGE THIS to your computer's IP if using a physical device:
-const API_URL = Platform.OS === 'web'
+// You should define EXPO_PUBLIC_API_URL in a .env file in the strivio-app directory
+const API_URL = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'web'
   ? 'http://localhost:5000/api'
-  : 'http://localhost:5000/api';
+  : 'http://localhost:5000/api');
 
 const getToken = async () => {
   return await AsyncStorage.getItem('strivio_token');
