@@ -1,6 +1,6 @@
-Strivio – AI Powered Fitness Form Coach 🏋️‍♂️
+Replicafit – AI Powered Fitness Form Coach 🏋️‍♂️
 
-Strivio is an AI-powered fitness assistant that helps users perform exercises correctly, follow structured workout plans, and maintain a healthier lifestyle. By combining computer vision, intelligent planning, and activity tracking, Strivio acts as a virtual personal trainer that guides users through every step of their fitness journey.
+Replicafit is an AI-powered fitness assistant that helps users perform exercises correctly, follow structured workout plans, and maintain a healthier lifestyle. By combining computer vision, intelligent planning, and activity tracking, Strivio acts as a virtual personal trainer that guides users through every step of their fitness journey.
 
 Unlike traditional fitness apps that only track steps or calories, Strivio focuses on exercise accuracy and proper form, ensuring workouts are both safe and effective.
 
@@ -41,7 +41,7 @@ This allows users to continuously improve their form and reduce the chance of in
 
 Personalized Workout Plans
 
-Strivio generates structured workout routines based on user goals and lifestyle.
+Replicafit generates structured workout routines based on user goals and lifestyle.
 
 User inputs include:
 
@@ -78,7 +78,7 @@ The app also suggests common healthy foods such as eggs, milk, oats, lentils, ve
 
 Activity Tracking Integration
 
-Strivio integrates with Google Fit to monitor daily physical activity.
+Replicafit integrates with Google Fit to monitor daily physical activity.
 
 The integration allows the app to track:
 
@@ -91,7 +91,7 @@ This helps users understand their overall activity levels beyond workouts.
 
 Guided Workout Mode
 
-Strivio provides real-time guidance during workouts.
+Replicafit provides real-time guidance during workouts.
 
 Features include:
 
@@ -123,7 +123,7 @@ Each exercise includes:
 
 Progress Tracking
 
-Strivio helps users monitor long-term progress through:
+Replicafit helps users monitor long-term progress through:
 
 • Workout streaks
 • Exercise accuracy improvement
