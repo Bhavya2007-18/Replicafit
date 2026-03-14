@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "strivio-app",
-    "slug": "strivio-app",
+    "name": "Replicafit",
+    "slug": "replicafit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "strivioapp",
+    "scheme": "replicafit",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

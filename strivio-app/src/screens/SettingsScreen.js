@@ -44,7 +44,7 @@ export default function SettingsScreen({ navigation }) {
           <Text style={s.logoutText}>Sign Out</Text>
         </TouchableOpacity>
 
-        <Text style={s.version}>Strivio v1.0.0</Text>
+        <Text style={s.version}>Replicafit v1.0.0</Text>
       </ScrollView>
       <BottomNavBar navigation={navigation} activeRoute="Settings" />
     </SafeAreaView>

@@ -183,7 +183,7 @@ export default function GuidedWorkoutScreen({ navigation }) {
       <SafeAreaView style={s.container}>
         <View style={s.permissionBox}>
           <Text style={s.permTitle}>Camera Permission Needed</Text>
-          <Text style={s.permDesc}>Strivio needs camera access to track your exercise form in real-time using AI.</Text>
+          <Text style={s.permDesc}>Replicafit needs camera access to track your exercise form in real-time using AI.</Text>
           <TouchableOpacity style={s.permBtn} onPress={requestPermission}>
             <Text style={s.permBtnText}>Grant Camera Access</Text>
           </TouchableOpacity>

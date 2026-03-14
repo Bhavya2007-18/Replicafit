@@ -33,7 +33,7 @@ export default function HomeDashboardScreen({ navigation }) {
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.scroll}>
         <View style={s.header}>
-          <Text style={s.logo}>Strivio</Text>
+          <Text style={s.logo}>Replicafit</Text>
           <Text style={s.greeting}>Hi, {displayName}</Text>
           <Text style={s.sub}>Your fitness summary for today</Text>
         </View>

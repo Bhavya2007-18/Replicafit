@@ -35,7 +35,7 @@ export default function LoginScreen({ navigation }) {
     <SafeAreaView style={s.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={s.scroll}>
-          <Text style={s.logo}>Strivio</Text>
+          <Text style={s.logo}>Replicafit</Text>
           <Text style={s.tagline}>AI-Powered Fitness Coach</Text>
 
           <View style={s.card}>
