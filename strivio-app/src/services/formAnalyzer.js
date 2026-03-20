@@ -39,6 +39,10 @@ const IDEAL_FORMS = {
     shoulderAngle: { min: 80, max: 100, weight: 0.3, label: 'Arm position' },
     spineAngle: { min: 170, max: 185, weight: 0.3, label: 'Spine straight' },
   },
+  bicep_curls: {
+    elbowAngle: { min: 30, max: 150, weight: 0.6, label: 'Full extension/flexion' },
+    shoulderAngle: { min: 0, max: 30, weight: 0.4, label: 'Upper arm stability' }
+  },
 };
 
 /**
@@ -161,6 +165,65 @@ const analyzeLungeForm = (keypoints) => {
 };
 
 /**
+ * Analyze form for jumping jacks
+ */
+const analyzeJumpingJacksForm = (keypoints) => {
+  const find = (n) => findKeypoint(keypoints, n);
+  const lShoulder = find('left_shoulder'), rShoulder = find('right_shoulder');
+  const lElbow = find('left_elbow'), rElbow = find('right_elbow');
+  const lHip = find('left_hip'), rHip = find('right_hip');
+
+  if (!lShoulder || !rShoulder || !lHip || !rHip || !lElbow || !rElbow) return null;
+
+  const shoulderAngle = calculateAngle(lElbow, lShoulder, lHip);
+  const rShoulderAngle = calculateAngle(rElbow, rShoulder, rHip);
+  
+  // Symmetry
+  const symmetry = Math.abs(shoulderAngle - rShoulderAngle);
+  
+  const scores = {
+    shoulderAngle: scoreAngle(shoulderAngle, {min: 140, max: 180, weight: 0.6}),
+    symmetry: scoreAngle(symmetry, {min: -15, max: 15, weight: 0.4})
+  };
+
+  const totalAccuracy = Math.round(scores.shoulderAngle * 0.6 + scores.symmetry * 0.4);
+
+  return { accuracy: totalAccuracy, scores, feedback: ['Keep going!'], errors: [], angles: { shoulderAngle } };
+};
+
+/**
+ * Analyze form for bicep curls
+ */
+const analyzeBicepCurlsForm = (keypoints) => {
+  // Only accept keypoints with reasonable confidence
+  const find = (n) => { const k = findKeypoint(keypoints, n); return k && k.score > 0.3 ? k : null; };
+  const lShoulder = find('left_shoulder'), rShoulder = find('right_shoulder');
+  const lElbow = find('left_elbow'), rElbow = find('right_elbow');
+  const lWrist = find('left_wrist'), rWrist = find('right_wrist');
+  const lHip = find('left_hip'), rHip = find('right_hip');
+
+  if (!lShoulder || !lElbow || !lWrist) return null;
+
+  const elbowAngle = calculateAngle(lShoulder, lElbow, lWrist);
+  // If hip is missing (e.g. waist up camera), calculate relative to a vertical drop from shoulder
+  const verticalRef = { x: lShoulder.x, y: lShoulder.y + 0.5 };
+  const shoulderAngle = lHip ? calculateAngle(lElbow, lShoulder, lHip) : calculateAngle(lElbow, lShoulder, verticalRef);
+
+  const ideal = IDEAL_FORMS.bicep_curls;
+  const scores = {
+    elbowAngle: scoreAngle(elbowAngle, ideal.elbowAngle),
+    shoulderAngle: scoreAngle(shoulderAngle, ideal.shoulderAngle)
+  };
+
+  const totalAccuracy = Math.round(
+    scores.elbowAngle * ideal.elbowAngle.weight +
+    scores.shoulderAngle * ideal.shoulderAngle.weight
+  );
+
+  return { accuracy: totalAccuracy, scores, feedback: ['Keep elbows tucked'], errors: [], angles: { elbowAngle, shoulderAngle } };
+};
+
+/**
  * Main form analysis function
  * Routes to the correct analyzer based on detected exercise
  */
@@ -188,6 +251,12 @@ export const analyzeForm = (keypoints, exercise, isReliable) => {
     case 'lunges':
       result = analyzeLungeForm(keypoints);
       break;
+    case 'jumping_jacks':
+      result = analyzeJumpingJacksForm(keypoints);
+      break;
+    case 'bicep_curls':
+      result = analyzeBicepCurlsForm(keypoints);
+      break;
     case 'planks': {
       // Planks: score is just hold stability
       const plankErrors = detectPostureErrors('planks', { hipAngle: keypoints[11]?.y || 180 });
@@ -207,20 +276,22 @@ export const analyzeForm = (keypoints, exercise, isReliable) => {
 };
 
 /**
- * Rep detection using a robust 3-state machine with debounce
- * States: IDLE → DESCENDING → ASCENDING → (rep counted) → IDLE
+ * Rep detection using a robust 4-state machine with debounce
+ * States: IDLE → CONCENTRIC → ECCENTRIC → (rep counted) → IDLE
  */
-const DEBOUNCE_MS = 400; // Minimum time between reps to prevent double-counting
+const DEBOUNCE_MS = 600; // stricter debounce to prevent double counting jitter
 const REP_THRESHOLDS = {
-  squats:   { downEnter: 120, upExit: 150 },
-  pushups:  { downEnter: 110, upExit: 150 },
-  lunges:   { downEnter: 120, upExit: 150 },
+  squats:   { enter: 120, exit: 160, type: 'flexion' }, // knee flexes
+  pushups:  { enter: 100, exit: 150, type: 'flexion' }, // elbow flexes
+  lunges:   { enter: 110, exit: 150, type: 'flexion' }, // knee flexes
+  jumping_jacks: { enter: 140, exit: 60, type: 'extension' }, // arms raise up
+  bicep_curls: { enter: 90, exit: 140, type: 'flexion' }, // elbow flexes
 };
 
 let repState = { phase: 'IDLE', reps: 0, lastRepTime: 0, repStartTime: 0 };
 
 export const detectRep = (rawAngles, exercise) => {
-  if (!rawAngles) return repState;
+  if (!rawAngles || exercise === 'planks') return repState;
 
   // Apply angle smoothing for stability
   const angles = smoothAngles(rawAngles);
@@ -228,24 +299,29 @@ export const detectRep = (rawAngles, exercise) => {
   const thresholds = REP_THRESHOLDS[exercise];
   if (!thresholds) return repState;
 
-  const primaryAngle = exercise === 'pushups'
-    ? (angles.elbowAngle || angles.leftElbow || 180)
-    : (angles.kneeAngle || angles.frontKnee || angles.leftKnee || 180);
+  let primaryAngle = 180;
+  if (exercise === 'pushups') primaryAngle = angles.elbowAngle || angles.leftElbow || 180;
+  else if (exercise === 'jumping_jacks') primaryAngle = angles.shoulderAngle || angles.leftShoulder || 0;
+  else if (exercise === 'bicep_curls') primaryAngle = angles.elbowAngle || angles.leftElbow || 180;
+  else primaryAngle = angles.kneeAngle || angles.frontKnee || angles.leftKnee || 180;
 
   const now = Date.now();
+  const isFlexionBased = thresholds.type === 'flexion';
+
+  // For squats/pushups: flexion means angle gets smaller.
+  // For jumping jacks: extension means angle gets larger.
 
   switch (repState.phase) {
     case 'IDLE':
-      if (primaryAngle < thresholds.downEnter) {
-        repState.phase = 'DESCENDING';
+      if (isFlexionBased ? primaryAngle < thresholds.enter : primaryAngle > thresholds.enter) {
+        repState.phase = 'MID_REP';
         repState.repStartTime = now;
       }
       break;
 
-    case 'DESCENDING':
-      if (primaryAngle > thresholds.upExit) {
-        // Debounce: only count if enough time has passed since last rep
-        if ((now - repState.lastRepTime) > DEBOUNCE_MS) {
+    case 'MID_REP':
+      if (isFlexionBased ? primaryAngle > thresholds.exit : primaryAngle < thresholds.exit) {
+        if ((now - repState.lastRepTime) > DEBOUNCE_MS && (now - repState.repStartTime) > 300) {
           repState.reps++;
           repState.lastRepTime = now;
           repAccuracies.push(lastRepAccuracy);

@@ -37,7 +37,7 @@ export default function SettingsScreen({ navigation }) {
 
         <Text style={s.section}>Account</Text>
         <TouchableOpacity style={s.menuItem}><Text style={s.menuText}>Edit Profile</Text><Text style={s.menuArrow}>›</Text></TouchableOpacity>
-        <TouchableOpacity style={s.menuItem}><Text style={s.menuText}>Workout History</Text><Text style={s.menuArrow}>›</Text></TouchableOpacity>
+        <TouchableOpacity style={s.menuItem} onPress={() => navigation.navigate('DeviceIntegrations')}><Text style={s.menuText}>Integrations & Sync</Text><Text style={s.menuArrow}>›</Text></TouchableOpacity>
         <TouchableOpacity style={s.menuItem}><Text style={s.menuText}>Privacy & Data</Text><Text style={s.menuArrow}>›</Text></TouchableOpacity>
 
         <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>

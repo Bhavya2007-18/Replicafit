@@ -131,6 +131,12 @@ export default function HomeDashboardScreen({ navigation }) {
           <HubCard icon="🎯" label="GOALS" sub="Target" onPress={() => navigation.navigate('GoalTracking')} />
           <HubCard icon="📈" label="METRICS" sub="Analytics" onPress={() => navigation.navigate('ProgressDashboard')} />
           <HubCard icon="🏆" label="ELITE" sub="Badges" onPress={() => navigation.navigate('Achievements')} />
+          <HubCard icon="📏" label="BODY" sub="Measure" onPress={() => navigation.navigate('BodyMeasurements')} />
+          <HubCard icon="💤" label="SLEEP" sub="Recovery" onPress={() => navigation.navigate('SleepLogger')} />
+          <HubCard icon="🧠" label="MOOD" sub="Wellness" onPress={() => navigation.navigate('MoodCheckin')} />
+          <HubCard icon="💧" label="HYDRATE" sub="Water" onPress={() => navigation.navigate('Hydration')} />
+          <HubCard icon="⏱️" label="FASTING" sub="Timer" onPress={() => navigation.navigate('Fasting')} />
+          <HubCard icon="⚙️" label="DEVICES" sub="Sync" onPress={() => navigation.navigate('DeviceIntegrations')} />
         </View>
 
         {/* Start Session CTA */}

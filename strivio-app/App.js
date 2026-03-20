@@ -22,6 +22,13 @@ import AchievementsScreen from './src/screens/AchievementsScreen';
 import CommunityScreen from './src/screens/CommunityScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import FatigueMonitorScreen from './src/screens/FatigueMonitorScreen';
+import BodyMeasurementsScreen from './src/screens/BodyMeasurementsScreen';
+import SleepLoggerScreen from './src/screens/SleepLoggerScreen';
+import MoodCheckinScreen from './src/screens/MoodCheckinScreen';
+import HydrationScreen from './src/screens/HydrationScreen';
+import FastingScreen from './src/screens/FastingScreen';
+import DeviceIntegrationsScreen from './src/screens/DeviceIntegrationsScreen';
+import MFASetupScreen from './src/screens/MFASetupScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,14 +45,21 @@ function AppNavigator() {
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ 
+        headerShown: true, 
+        headerStyle: { backgroundColor: '#0a0a0a' },
+        headerTintColor: '#cafd00',
+        headerTitleStyle: { fontWeight: '800', fontSize: 12, letterSpacing: 2, color: '#f5f5f5' },
+        headerBackTitle: '',
+        headerShadowVisible: false,
+      }}>
       {!user ? (
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       ) : !user.onboardingComplete ? (
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
       ) : (
         <>
-          <Stack.Screen name="HomeDashboard" component={HomeDashboardScreen} />
+          <Stack.Screen name="HomeDashboard" component={HomeDashboardScreen} options={{ headerShown: false }} />
           <Stack.Screen name="WorkoutPlans" component={WorkoutPlansScreen} />
           <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
           <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
@@ -58,6 +72,13 @@ function AppNavigator() {
           <Stack.Screen name="Community" component={CommunityScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="FatigueMonitor" component={FatigueMonitorScreen} />
+          <Stack.Screen name="BodyMeasurements" component={BodyMeasurementsScreen} />
+          <Stack.Screen name="SleepLogger" component={SleepLoggerScreen} />
+          <Stack.Screen name="MoodCheckin" component={MoodCheckinScreen} />
+          <Stack.Screen name="Hydration" component={HydrationScreen} />
+          <Stack.Screen name="Fasting" component={FastingScreen} />
+          <Stack.Screen name="DeviceIntegrations" component={DeviceIntegrationsScreen} />
+          <Stack.Screen name="MFASetup" component={MFASetupScreen} />
         </>
       )}
     </Stack.Navigator>

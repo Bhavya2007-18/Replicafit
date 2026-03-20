@@ -50,6 +50,16 @@ export function AuthProvider({ children }) {
     return result;
   };
 
+  const verifyMFA = async (userId, code) => {
+    const result = await api.verifyLoginMFA(userId, code);
+    if (result.token) {
+      await AsyncStorage.setItem('strivio_token', result.token);
+      setToken(result.token);
+      setUser(result.user);
+    }
+    return result;
+  };
+
   const register = async (name, email, password) => {
     const result = await api.register(name, email, password);
     if (result.token) {
@@ -84,7 +94,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser, continueAsGuest }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, verifyMFA, logout, updateUser, continueAsGuest }}>
       {children}
     </AuthContext.Provider>
   );
