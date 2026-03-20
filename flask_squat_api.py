@@ -1,103 +1,94 @@
-from flask import Flask, Response, jsonify
-from flask_cors import CORS
+import os
 import cv2
-import threading
-import mediapipe as mp
+import numpy as np
+import base64
+import logging
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from ai_squat_coach import PoseDetector, SquatAnalyzer
 
+# 1. SETUP LOGGING
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("FitnessAPI")
+
 app = Flask(__name__)
-# Enable CORS to allow a frontend webpage on a different port/host to fetch data
 CORS(app)
 
-latest_metrics = {
-    "reps": 0,
-    "state": "STANDING",
-    "feedback": [],
-    "tempo": 0,
-    "score": 0,
-    "depth": 0,
-    "error": "Initializing..."
-}
+# 2. INITIALIZE ENGINES
+# Note: In a production multi-user system, you would use a session manager.
+# For this deployment, we use a single instance for the demo user.
+detector = PoseDetector()
+analyzer = SquatAnalyzer()
 
-class VideoStreamer:
-    def __init__(self):
-        self.detector = PoseDetector()
-        self.analyzer = SquatAnalyzer()
-        self.cap = cv2.VideoCapture(0)
-        # Thread lock for safe read/write of metrics across Flask routes
-        self.lock = threading.Lock()
+@app.route('/process_frame', methods=['POST'])
+def process_frame():
+    """
+    Receives a base64 encoded frame from the frontend, 
+    processes it using MediaPipe, and returns metrics + landmarks.
+    """
+    try:
+        data = request.json
+        if not data or 'image' not in data:
+            return jsonify({"error": "No image data provided"}), 400
+
+        # Decode base64 image
+        img_data = base64.b64decode(data['image'].split(',')[1])
+        nparr = np.frombuffer(img_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        if img is None:
+            return jsonify({"error": "Failed to decode image"}), 400
+
+        h, w, _ = img.shape
         
-    def generate_frames(self):
-        global latest_metrics
-        while True:
-            success, img = self.cap.read()
-            if not success:
-                with self.lock:
-                    latest_metrics["error"] = "Camera not available"
-                break
-                
-            # Mirror frame for natural interacting
-            img = cv2.flip(img, 1)
-            h, w, c = img.shape
-            
-            # Predict
-            results = self.detector.process_frame(img)
-            lm_dict = self.detector.extract_landmarks(results, w, h)
-            
-            # Run the Squat Machine 
-            analysis_data = self.analyzer.update(lm_dict)
-            
-            # Update metrics atomically for the /metrics JSON endpoint
-            with self.lock:
-                if not lm_dict:
-                    latest_metrics["error"] = "No user detected"
-                else:
-                    latest_metrics["error"] = None
-                    latest_metrics["reps"] = self.analyzer.reps
-                    latest_metrics["state"] = self.analyzer.state
-                    latest_metrics["feedback"] = self.analyzer.feedback_msgs
-                    latest_metrics["tempo"] = self.analyzer.tempo
-                    
-                    scores = self.analyzer.rep_scores
-                    latest_metrics["score"] = int(sum(scores)/len(scores)) if scores else 0
-                    if analysis_data:
-                        latest_metrics["depth"] = analysis_data.get("depth_score", 0)
+        # 1. POSE DETECTION
+        results = detector.process_frame(img)
+        lm_dict = detector.extract_landmarks(results, w, h)
+        
+        # 2. SQUAT ANALYSIS
+        # This updates the stateful 'analyzer' object
+        analysis_data = analyzer.update(lm_dict)
+        
+        # 3. PREPARE RESPONSE DATA
+        # We send back landmarks instead of the whole image to save bandwidth.
+        # The frontend will render the skeleton.
+        landmarks = []
+        if results.pose_landmarks:
+            for lm in results.pose_landmarks.landmark:
+                landmarks.append({
+                    "x": lm.x,
+                    "y": lm.y,
+                    "z": lm.z,
+                    "visibility": lm.visibility
+                })
 
-            # Draw the real-time Semantic Skeleton
-            if results.pose_landmarks:
-                is_correct = len(self.analyzer.feedback_msgs) == 0
-                skel_color = (0, 255, 0) if is_correct else (0, 0, 255)
-                
-                mp.solutions.drawing_utils.draw_landmarks(
-                    img, results.pose_landmarks, mp.solutions.pose.POSE_CONNECTIONS,
-                    landmark_drawing_spec=mp.solutions.drawing_utils.DrawingSpec(color=(255,165,0), thickness=3, circle_radius=4),
-                    connection_drawing_spec=mp.solutions.drawing_utils.DrawingSpec(color=skel_color, thickness=3)
-                )
+        response = {
+            "reps": analyzer.reps,
+            "state": analyzer.state,
+            "feedback": list(analyzer.feedback_msgs),
+            "tempo": analyzer.tempo,
+            "depth": analysis_data.get("depth_score", 0) if analysis_data else 0,
+            "landmarks": landmarks,
+            "score": int(np.mean(analyzer.rep_scores)) if analyzer.rep_scores else 0
+        }
+        
+        return jsonify(response)
 
-            # Convert to Motion-JPEG chunk (vital for smooth HTML video streaming)
-            ret, buffer = cv2.imencode('.jpg', img)
-            if not ret:
-                continue
-            frame_bytes = buffer.tobytes()
-            
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+    except Exception as e:
+        logger.error(f"Error processing frame: {str(e)}")
+        return jsonify({"error": "Internal server error during processing"}), 500
 
-streamer = VideoStreamer()
-
-@app.route('/video_feed')
-def video_feed():
-    """Streams live MJPEG video."""
-    return Response(streamer.generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/metrics')
-def metrics():
-    """Returns ultra-fast real-time telemetry."""
-    with streamer.lock:
-        return jsonify(latest_metrics)
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "healthy", "engine": "MediaPipe Pose"}), 200
 
 if __name__ == '__main__':
-    # Run fully threaded to prevent frame-processing from blocking the JSON pollers
-    print("🚀 Video API active at /video_feed")
-    print("🚀 Metric API active at /metrics")
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    # Cloud providers like Railway/Heroku assign a port via the PORT env variable
+    port = int(os.environ.get("PORT", 5000))
+    logger.info(f"🚀 Starting Production API on 0.0.0.0:{port}")
+    
+    # Debug=False for production deployment
+    app.run(host='0.0.0.0', port=port, debug=False)

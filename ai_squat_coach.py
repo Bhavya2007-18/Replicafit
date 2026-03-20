@@ -71,19 +71,27 @@ class PoseDetector:
 class FeedbackSystem:
     """Non-blocking text-to-speech engine for real-time coaching commands."""
     def __init__(self):
-        self.engine = pyttsx3.init()
-        self.engine.setProperty('rate', 180) # Faster speech
+        try:
+            self.engine = pyttsx3.init()
+            self.engine.setProperty('rate', 180) # Faster speech
+            self.enabled = True
+        except Exception as e:
+            print(f"⚠️ Audio Feedback Disabled: {str(e)}")
+            self.enabled = False
         self.is_speaking = False
         
     def speak(self, text):
-        if not self.is_speaking:
+        if self.enabled and not self.is_speaking:
             t = threading.Thread(target=self._speak_thread, args=(text,))
             t.start()
             
     def _speak_thread(self, text):
         self.is_speaking = True
-        self.engine.say(text)
-        self.engine.runAndWait()
+        try:
+            self.engine.say(text)
+            self.engine.runAndWait()
+        except:
+            pass
         self.is_speaking = False
 
 # ==========================================
