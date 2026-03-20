@@ -21,6 +21,7 @@ import AICoachChatScreen from './src/screens/AICoachChatScreen';
 import AchievementsScreen from './src/screens/AchievementsScreen';
 import CommunityScreen from './src/screens/CommunityScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import FatigueMonitorScreen from './src/screens/FatigueMonitorScreen';
 import BodyMeasurementsScreen from './src/screens/BodyMeasurementsScreen';
 import SleepLoggerScreen from './src/screens/SleepLoggerScreen';
 import MoodCheckinScreen from './src/screens/MoodCheckinScreen';
@@ -70,6 +71,7 @@ function AppNavigator() {
           <Stack.Screen name="Achievements" component={AchievementsScreen} />
           <Stack.Screen name="Community" component={CommunityScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="FatigueMonitor" component={FatigueMonitorScreen} />
           <Stack.Screen name="BodyMeasurements" component={BodyMeasurementsScreen} />
           <Stack.Screen name="SleepLogger" component={SleepLoggerScreen} />
           <Stack.Screen name="MoodCheckin" component={MoodCheckinScreen} />
