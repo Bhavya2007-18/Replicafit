@@ -5,6 +5,17 @@
  */
 import { calculateAngle, findKeypoint } from './poseDetectionService';
 
+// Extended exercise schema with tutorial support
+const exerciseSchema = {
+  id: String,
+  name: String,
+  description: String,
+  targetMuscles: [String],
+  difficulty: String,
+  tutorialUrl: String,
+  videoPreviewUrl: String
+};
+
 // Sliding window of recent frames for pattern detection
 const FRAME_WINDOW = 15;
 let frameHistory = [];
