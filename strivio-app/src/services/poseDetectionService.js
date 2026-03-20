@@ -62,10 +62,15 @@ export const detectPose = async (frameData) => {
   }
 
   try {
-    // 1. Convert image to tensor (using Buffer for safer base64 decoding)
-    const imgB64 = await FileSystem.readAsStringAsync(frameData.uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+    let imgB64 = '';
+    if (frameData.base64) {
+      imgB64 = frameData.base64;
+    } else if (frameData.uri.startsWith('data:image')) {
+      imgB64 = frameData.uri.split(',')[1];
+    } else {
+      imgB64 = await FileSystem.readAsStringAsync(frameData.uri, { encoding: FileSystem.EncodingType.Base64 });
+    }
+
     const imgBuffer = Buffer.from(imgB64, 'base64');
     const rawImageData = new Uint8Array(imgBuffer);
     const imageTensor = decodeJpeg(rawImageData);

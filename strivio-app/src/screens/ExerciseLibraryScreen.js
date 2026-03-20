@@ -41,7 +41,7 @@ export default function ExerciseLibraryScreen({ navigation }) {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
         {filtered.map((ex) => (
-          <TouchableOpacity key={ex.id || ex._id} style={s.card} onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: ex.id || ex._id })}>
+          <TouchableOpacity key={ex.id || ex._id} style={s.card} onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: ex.id || ex._id, exercise: ex })}>
             <View style={s.cardBody}>
               <View style={s.cardHeader}>
                 <Text style={s.cardTitle}>{ex.name.toUpperCase()}</Text>

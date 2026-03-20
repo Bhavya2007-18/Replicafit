@@ -49,17 +49,34 @@ export default function DietGuidelinesScreen({ navigation }) {
       fats: f || Math.round((cal || mealCalories) * 0.05)
     };
 
-    await api.logNutrition({
-      meals: [meal],
-      totalCalories: stats.calories + meal.calories,
-      totalProtein: stats.protein + meal.protein,
-      totalCarbs: stats.carbs + meal.carbs,
-      totalFats: stats.fat + meal.fats,
+    setLogs(prev => {
+      const todayString = new Date().toDateString();
+      const existingToday = prev.find(l => new Date(l.date).toDateString() === todayString) || {
+        date: new Date().toISOString(), totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFats: 0, meals: []
+      };
+      const updatedToday = {
+        ...existingToday,
+        totalCalories: existingToday.totalCalories + meal.calories,
+        totalProtein: existingToday.totalProtein + meal.protein,
+        totalCarbs: existingToday.totalCarbs + meal.carbs,
+        totalFats: existingToday.totalFats + meal.fats,
+        meals: [...(existingToday.meals || []), meal]
+      };
+      return [updatedToday, ...prev.filter(l => new Date(l.date).toDateString() !== todayString)];
     });
+
+    try {
+      await api.logNutrition({
+        meals: [meal],
+        totalCalories: stats.calories + meal.calories,
+        totalProtein: stats.protein + meal.protein,
+        totalCarbs: stats.carbs + meal.carbs,
+        totalFats: stats.fat + meal.fats,
+      });
+    } catch (e) { console.log('Guest mode save skipped for meals'); }
     
     setMealName('');
     setMealCalories('');
-    fetchLogs();
   };
 
   return (

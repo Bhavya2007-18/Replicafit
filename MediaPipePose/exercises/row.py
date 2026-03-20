@@ -20,13 +20,24 @@ class Row(BaseExercise):
         return calculate_angle(shoulder, elbow, wrist)
 
     def get_stage(self, angle, previous_angle):
-        if angle > 160:
+        if self.current_stage == "up":
+            if angle <= 30:
+                return "up"
+            elif angle < 50:
+                return "middle"
             return "down"
-        elif 90 < angle <= 160:
-            return "middle"
-        elif angle <= 90:
+        elif self.current_stage == "down":
+            if angle > 150:
+                return "down"
+            elif angle > 120:
+                return "middle"
             return "up"
-        return "middle"
+        else:
+            if angle <= 35:
+                return "up"
+            elif angle > 155:
+                return "down"
+            return "middle"
 
     def calculate_accuracy(self, landmarks, frame_width, frame_height):
         hip_l = get_landmark_coords(

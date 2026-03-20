@@ -44,6 +44,9 @@ class BaseExercise(ABC):
         self.rep_start_time = None
         self.frame_count = 0
         self.last_rep_was_good = True
+        self.angle_buffer: List[float] = []
+        self.buffer_size: int = 5
+        self.smoothed_angle: float = 0.0
 
     @abstractmethod
     def get_primary_angle(
@@ -77,6 +80,12 @@ class BaseExercise(ABC):
     def get_side(self) -> str:
         return "primary"
 
+    def _smooth_angle(self, raw_angle: float) -> float:
+        self.angle_buffer.append(raw_angle)
+        if len(self.angle_buffer) > self.buffer_size:
+            self.angle_buffer.pop(0)
+        return sum(self.angle_buffer) / len(self.angle_buffer)
+
     def process_frame(self, landmarks, frame_width: int, frame_height: int) -> Dict:
         if not is_pose_visible(landmarks):
             return {
@@ -88,7 +97,8 @@ class BaseExercise(ABC):
                 "feedback_text": "Cannot detect pose",
             }
 
-        angle = self.get_primary_angle(landmarks, frame_width, frame_height)
+        raw_angle = self.get_primary_angle(landmarks, frame_width, frame_height)
+        angle = self._smooth_angle(raw_angle)
         previous_angle = self.last_angle
         new_stage = self.get_stage(angle, previous_angle)
         self.last_angle = angle
@@ -139,6 +149,8 @@ class BaseExercise(ABC):
         self.current_stage = "idle"
         self.last_angle = 0
         self.frame_count = 0
+        self.angle_buffer = []
+        self.smoothed_angle = 0.0
 
     def stop(self):
         self.is_active = False

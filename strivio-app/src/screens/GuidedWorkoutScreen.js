@@ -11,10 +11,12 @@ import { recordRep, analyzeFatigue, resetFatigueTracker } from '../services/fati
 import { markRepStart, markRepEnd, recordAnglesForROM, calculateSymmetry, getTempoROMSummary, resetTempoROM } from '../services/tempoROMTracker';
 import { calculateIntensity } from '../services/workoutIntensity';
 import { speakFeedback, announceRep, announceCorrection, announceFatigue, stopSpeech, setVoiceEnabled } from '../services/voiceFeedback';
-import api from '../services/api';
+import api, { SOCKET_URL } from '../services/api';
+import { io } from 'socket.io-client';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CAMERA_HEIGHT = SCREEN_WIDTH * 1.33;
+const CAMERA_WIDTH = Math.min(SCREEN_WIDTH, 500); // Cap width for web/tablets
+const CAMERA_HEIGHT = CAMERA_WIDTH * 1.33; // 4:3 aspect ratio
 
 export default function GuidedWorkoutScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -42,6 +44,7 @@ export default function GuidedWorkoutScreen({ navigation }) {
   const analysisRef = useRef(null);
   const isActiveRef = useRef(false);
   const prevRepsRef = useRef(0);
+  const socketRef = useRef(null);
 
   // Performance Grade Logic
   const getGrade = (acc) => {
@@ -68,10 +71,13 @@ export default function GuidedWorkoutScreen({ navigation }) {
 
   useEffect(() => {
     loadModel();
+    socketRef.current = io(SOCKET_URL);
+    
     return () => {
       disposePoseDetection();
       if (timerRef.current) clearInterval(timerRef.current);
       if (analysisRef.current) clearInterval(analysisRef.current);
+      if (socketRef.current) socketRef.current.disconnect();
     };
   }, []);
 
@@ -100,15 +106,22 @@ export default function GuidedWorkoutScreen({ navigation }) {
   };
 
   const startAnalysisLoop = () => {
+    let isProcessing = false;
+
     analysisRef.current = setInterval(async () => {
-      if (!isActiveRef.current || !cameraRef.current) return;
+      if (!isActiveRef.current || !cameraRef.current || isProcessing) return;
+      isProcessing = true;
+
       try {
         const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.1, // Lower quality for speed
+          quality: 0, // Min quality for max speed
           skipProcessing: true,
-          base64: false,
+          base64: true,
         });
-        if (!photo) return;
+        if (!photo) {
+          isProcessing = false;
+          return;
+        }
 
         const { keypoints: kps, isReliable, avgConfidence } = await detectPose(photo);
         if (kps.length > 0) {
@@ -139,7 +152,10 @@ export default function GuidedWorkoutScreen({ navigation }) {
               }
             }
             setReps(repResult.reps);
-            if (classification.angles) recordAnglesForROM(classification.angles);
+            if (classification.angles) {
+              recordAnglesForROM(classification.angles);
+              calculateSymmetry(classification.angles);
+            }
           }
 
           if (enablePostureCorrection && formResult.errors && formResult.errors.length > 0) {
@@ -147,12 +163,25 @@ export default function GuidedWorkoutScreen({ navigation }) {
           }
           const risks = detectInjuryRisks(kps, classification.exercise);
           setInjuryWarnings(risks);
+
+          // Emit Live Telemetry to Backend
+          if (socketRef.current) {
+            socketRef.current.emit('live-telemetry', {
+              exercise: classification.exercise || 'tracking',
+              reps: reps,
+              accuracy: formResult.accuracy,
+              fatigue: fatigueLevel,
+            });
+          }
         } else if (!isReliable) {
           setFeedback('MOVE INTO FRAME');
           setIsPaused(true);
         }
-      } catch (e) {}
-    }, 200);
+      } catch (e) {
+      } finally {
+        isProcessing = false;
+      }
+    }, 250); // Process up to 4 frames a second
   };
 
   const stopWorkout = async () => {
@@ -219,7 +248,7 @@ export default function GuidedWorkoutScreen({ navigation }) {
         <CameraView ref={cameraRef} style={s.camera} facing={facing} pointerEvents="none" />
         
         {isActive && keypoints.length > 0 && (
-          <SkeletonOverlay keypoints={keypoints} accuracy={accuracy} width={SCREEN_WIDTH} height={CAMERA_HEIGHT} />
+          <SkeletonOverlay keypoints={keypoints} accuracy={accuracy} width={CAMERA_WIDTH} height={CAMERA_HEIGHT} />
         )}
 
         {/* Floating HUD Grade */}
@@ -323,7 +352,7 @@ const s = StyleSheet.create({
   hudName: { color: COLORS.textPrimary, fontWeight: '900', letterSpacing: 1 },
   hudAction: { color: COLORS.primaryContainer, fontWeight: '700', fontSize: 12 },
 
-  cameraWrapper: { width: SCREEN_WIDTH, height: CAMERA_HEIGHT, backgroundColor: '#000', overflow: 'hidden' },
+  cameraWrapper: { width: CAMERA_WIDTH, height: CAMERA_HEIGHT, backgroundColor: '#000', overflow: 'hidden', alignSelf: 'center', borderRadius: RADIUS.xl, marginTop: SPACING.md },
   camera: { ...StyleSheet.absoluteFillObject },
   idleOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },
   idleText: { color: COLORS.primaryContainer, fontWeight: '900', fontSize: FONT.sizes.xl, letterSpacing: 4 },

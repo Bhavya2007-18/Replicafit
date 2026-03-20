@@ -18,6 +18,20 @@ const userSchema = new mongoose.Schema({
   level: { type: Number, default: 1 },
   streak: { type: Number, default: 0 },
   lastWorkoutDate: { type: Date },
+  
+  // Advanced Security & Sync
+  mfaEnabled: { type: Boolean, default: false },
+  mfaSecret: { type: String }, // TOTP base32 secret
+  passkeys: [{
+    credentialID: Buffer,
+    credentialPublicKey: Buffer,
+    counter: Number,
+    transports: [String]
+  }],
+  
+  // Family & Social Access
+  familyId: { type: mongoose.Schema.Types.ObjectId, ref: 'FamilyGroup' },
+  familyRole: { type: String, enum: ['admin', 'member'], default: 'member' }
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {

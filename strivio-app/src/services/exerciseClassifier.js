@@ -175,9 +175,18 @@ export const classifyExercise = (keypoints) => {
   // Pick the highest scoring exercise
   const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
   
-  if (best && best[1] > 0.3) {
+  // Implement hysteresis/stickiness to prevent rapid flickering
+  const CONFIDENCE_THRESHOLD = 0.4;
+  
+  if (best && best[1] > CONFIDENCE_THRESHOLD) {
     detectedExercise = best[0];
     exerciseConfidence = best[1];
+  } else if (exerciseConfidence > 0) {
+    // Decay confidence slowly instead of instantly dropping
+    exerciseConfidence -= 0.05;
+    if (exerciseConfidence <= 0) {
+      detectedExercise = null;
+    }
   }
 
   return { exercise: detectedExercise, confidence: exerciseConfidence, angles };

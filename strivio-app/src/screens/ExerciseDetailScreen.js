@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
 import { WebView } from 'react-native-webview';
+import React from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { exerciseDatabase as exercises } from '../data/exerciseDatabase';
 
@@ -12,6 +14,23 @@ export default function ExerciseDetailScreen({ route, navigation }) {
   const [showVideoModal, setShowVideoModal] = useState(false);
   
   if (!ex) return null;
+  const { exerciseId, exercise: passedExercise } = route.params;
+  const ex = passedExercise || exercises.find(e => e.id === exerciseId || e._id === exerciseId);
+  const [expandedPhase, setExpandedPhase] = React.useState(null);
+  const [expandedMistake, setExpandedMistake] = React.useState(null);
+
+  if (!ex) return (
+    <SafeAreaView style={s.container}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>🔍</Text>
+        <Text style={{ color: '#f5f5f5', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>EXERCISE NOT FOUND</Text>
+        <Text style={{ color: '#888', fontSize: 12, textAlign: 'center', marginBottom: 24 }}>This exercise could not be loaded.</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ backgroundColor: '#cafd00', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 99 }}>
+          <Text style={{ color: '#0a0a0a', fontWeight: '900', fontSize: 12 }}>GO BACK</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.container}>
@@ -47,24 +66,58 @@ export default function ExerciseDetailScreen({ route, navigation }) {
 
         {/* Instructions */}
         <Text style={s.sectionHeader}>EXECUTION PROTOCOL</Text>
-        {ex.instructions.map((step, i) => (
-          <View key={i} style={s.stepCard}>
-            <View style={s.stepHeader}>
-              <View style={s.stepDot} />
-              <Text style={s.stepTitle}>PHASE {i + 1}</Text>
-            </View>
-            <Text style={s.stepText}>{step}</Text>
-          </View>
-        ))}
+        {ex.instructions.map((step, i) => {
+          const isExpanded = expandedPhase === i;
+          return (
+            <TouchableOpacity 
+              key={i} 
+              style={[s.stepCard, isExpanded && { borderColor: COLORS.primaryContainer, borderWidth: 1 }]}
+              activeOpacity={0.8}
+              onPress={() => setExpandedPhase(isExpanded ? null : i)}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1 }}>
+                  <View style={s.stepHeader}>
+                    <View style={s.stepDot} />
+                    <Text style={s.stepTitle}>PHASE {i + 1}</Text>
+                  </View>
+                  <Text style={s.stepText}>{step.text || step}</Text>
+                </View>
+                <Text style={{ color: COLORS.textMuted, fontSize: 20, fontWeight: '300', marginTop: 4 }}>
+                  {isExpanded ? '−' : '+'}
+                </Text>
+              </View>
+              {isExpanded && step.image && (
+                <Image source={{ uri: step.image }} style={s.stepImage} resizeMode="cover" />
+              )}
+            </TouchableOpacity>
+          );
+        })}
 
         {/* Common Mistakes */}
         <Text style={s.sectionHeader}>BIOMECHANIC WARNINGS</Text>
-        {ex.commonMistakes.map((m, i) => (
-          <View key={i} style={s.mistakeCard}>
-            <Text style={s.mistakeIcon}>⚡</Text>
-            <Text style={s.mistakeText}>{m.toUpperCase()}</Text>
-          </View>
-        ))}
+        {ex.commonMistakes.map((m, i) => {
+          const isExpanded = expandedMistake === i;
+          return (
+            <TouchableOpacity 
+              key={i} 
+              style={[s.mistakeCard, isExpanded && { borderColor: '#ff4757', backgroundColor: 'rgba(255, 71, 87, 0.1)' }]}
+              activeOpacity={0.8}
+              onPress={() => setExpandedMistake(isExpanded ? null : i)}
+            >
+              <View style={s.mistakeContent}>
+                <Text style={s.mistakeIcon}>⚡</Text>
+                <Text style={s.mistakeText}>{(m.text || m).toUpperCase()}</Text>
+                <Text style={{ color: 'rgba(255, 71, 87, 0.5)', fontSize: 20, fontWeight: '300', marginLeft: 16 }}>
+                  {isExpanded ? '−' : '+'}
+                </Text>
+              </View>
+              {isExpanded && m.image && (
+                <Image source={{ uri: m.image }} style={s.mistakeImage} resizeMode="cover" />
+              )}
+            </TouchableOpacity>
+          );
+        })}
 
         {/* Video Tutorial Section */}
         <Text style={s.sectionHeader}>VIDEO TUTORIAL</Text>
@@ -159,22 +212,39 @@ const s = StyleSheet.create({
     padding: SPACING.lg, 
     marginBottom: SPACING.md,
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.primaryContainer
+    borderLeftColor: COLORS.primaryContainer,
+    overflow: 'hidden'
   },
   stepHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   stepDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primaryContainer, marginRight: 8 },
   stepTitle: { fontSize: 10, fontWeight: '900', color: COLORS.textMuted, letterSpacing: 1 },
+  stepImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
+    backgroundColor: '#1a1a1a'
+  },
   stepText: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, lineHeight: 22 },
 
   mistakeCard: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
     backgroundColor: 'rgba(255, 71, 87, 0.05)', 
-    padding: SPACING.lg, 
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: 'rgba(255, 71, 87, 0.2)',
-    marginBottom: SPACING.sm
+    marginBottom: SPACING.lg,
+    overflow: 'hidden'
+  },
+  mistakeImage: {
+    width: '100%',
+    height: 140,
+    backgroundColor: '#1a1a1a'
+  },
+  mistakeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.lg,
   },
   mistakeIcon: { fontSize: 16, color: '#ff4757', marginRight: SPACING.md },
   mistakeText: { flex: 1, fontSize: 10, fontWeight: '800', color: COLORS.textSecondary, letterSpacing: 0.5 },

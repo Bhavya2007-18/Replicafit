@@ -20,13 +20,24 @@ class Pushup(BaseExercise):
         return calculate_angle(shoulder, elbow, wrist)
 
     def get_stage(self, angle, previous_angle):
-        if angle > 170:
+        if self.current_stage == "up":
+            if angle > 165:
+                return "down"
+            elif angle > 140:
+                return "middle"
             return "up"
-        elif 90 < angle <= 170:
-            return "middle"
-        elif angle <= 90:
+        elif self.current_stage == "down":
+            if angle <= 25:
+                return "up"
+            elif angle < 40:
+                return "middle"
             return "down"
-        return "middle"
+        else:
+            if angle > 160:
+                return "down"
+            elif angle <= 30:
+                return "up"
+            return "middle"
 
     def calculate_accuracy(self, landmarks, frame_width, frame_height):
         shoulder_l = get_landmark_coords(

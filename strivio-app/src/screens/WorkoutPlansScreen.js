@@ -62,8 +62,14 @@ export default function WorkoutPlansScreen({ navigation }) {
         ],
       };
 
-      await api.createWorkoutPlan(newPlan);
-      await loadPlans();
+      newPlan.createdAt = new Date().toISOString();
+      setPlans(prev => [newPlan, ...prev]);
+      
+      try {
+        await api.createWorkoutPlan(newPlan);
+      } catch (e) { console.log('Guest mode save skipped'); }
+      // Don't await loadPlans() immediately as it might overwrite our optimistic state
+      // with empty guest data
     } catch (e) { }
     setGenerating(false);
   };

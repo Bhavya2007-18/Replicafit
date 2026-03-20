@@ -26,13 +26,30 @@ class BicepCurl(BaseExercise):
         return calculate_angle(shoulder, elbow, wrist)
 
     def get_stage(self, angle, previous_angle):
-        if angle > 160:
-            return "down"
-        elif 30 < angle < 160:
-            return "middle"
-        elif angle <= 30:
+        """
+        Uses hysteresis to prevent rapid stage flipping at boundaries.
+        - Must go BELOW 25 to enter "up" (was 30)
+        - Must go ABOVE 165 to enter "down" (was 160)
+        - "middle" is a transition zone
+        """
+        if self.current_stage == "up":
+            if angle > 165:
+                return "down"
+            elif angle > 140:
+                return "middle"
             return "up"
-        return "middle"
+        elif self.current_stage == "down":
+            if angle <= 25:
+                return "up"
+            elif angle < 40:
+                return "middle"
+            return "down"
+        else:
+            if angle > 160:
+                return "down"
+            elif angle <= 30:
+                return "up"
+            return "middle"
 
     def calculate_accuracy(self, landmarks, frame_width, frame_height):
         shoulder_l = get_landmark_coords(
@@ -91,4 +108,4 @@ class BicepCurl(BaseExercise):
         return FeedbackLevel.GOOD, "Good job!"
 
     def get_rep_thresholds(self):
-        return {"up": 30.0, "down": 160.0}
+        return {"up": 25.0, "down": 165.0}
