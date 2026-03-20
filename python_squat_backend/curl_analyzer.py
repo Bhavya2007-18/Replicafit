@@ -31,11 +31,11 @@ class BicepCurlAnalyzer:
         self.right_state = 'DOWN'
         
         # Thresholds with hysteresis
-        self.T_DOWN = 160
-        self.T_DOWN_HYSTERESIS = 150
-        self.T_LIFTING = 140
-        self.T_TOP = 50
-        self.T_TOP_HYSTERESIS = 60
+        self.T_DOWN = 150
+        self.T_DOWN_HYSTERESIS = 135
+        self.T_LIFTING = 130
+        self.T_TOP = 75
+        self.T_TOP_HYSTERESIS = 85
         
         # Metrics
         self.reps = 0
@@ -46,7 +46,7 @@ class BicepCurlAnalyzer:
         self.right_rep_start = 0.0
         self.score = 100
         self.feedback = []
-        self.smoother = Smoother(window=5)
+        self.smoother = Smoother(window=2)  # Reduced for zero latency
         self.coach = VoiceCoach()
         
         self.active_issues = set()
@@ -66,44 +66,24 @@ class BicepCurlAnalyzer:
         rep_completed = False
         arm_issues = set()
         arm_feedback = []
-        
-        # --- FORM CHECKS ---
-        
-        # 1. Elbow drift
-        if abs(elbow_pos[0] - hip_pos[0]) > 80:
-            arm_feedback.append(f"Keep {side} elbow close")
-            arm_issues.add("ElbowDrift")
-        
-        # 2. Swing / momentum
-        shoulder_y_history.append(shoulder_pos[1])
-        if len(shoulder_y_history) >= 5:
-            if max(shoulder_y_history) - min(shoulder_y_history) > 40:
-                arm_feedback.append(f"Stop swinging ({side})")
-                arm_issues.add("Swing")
-        
-        # 3. Incomplete extension
-        if arm_state == 'DOWN' and elbow_angle < 155:
-            arm_feedback.append(f"Fully extend {side} arm")
-            arm_issues.add("IncompleteExtension")
-        
-        # --- STATE MACHINE ---
-        
+
+        # --- STATE MACHINE FIRST (rep detection must be clean and latency-free) ---
         if arm_state == 'DOWN':
             if elbow_angle < self.T_LIFTING:
                 arm_state = 'LIFTING'
                 rep_start = time.time()
-                
+
         elif arm_state == 'LIFTING':
             if elbow_angle < self.T_TOP:
                 arm_state = 'TOP'
             elif elbow_angle > self.T_DOWN:
-                arm_feedback.append(f"Incomplete rep ({side})")
+                # Arm went back to start without completing - silent reset, no rep
                 arm_state = 'DOWN'
-                
+
         elif arm_state == 'TOP':
             if elbow_angle > self.T_TOP_HYSTERESIS:
                 arm_state = 'LOWERING'
-                
+
         elif arm_state == 'LOWERING':
             if elbow_angle < self.T_TOP:
                 arm_state = 'TOP'
@@ -111,10 +91,30 @@ class BicepCurlAnalyzer:
                 arm_state = 'DOWN'
                 rep_completed = True
                 rep_time = time.time() - rep_start
-                if rep_time < 1.5:
-                    arm_feedback.append(f"Slow down ({side})")
+                if rep_time < 1.0:
+                    arm_feedback.append(f"Slow down ({side}) — control the weight")
                     arm_issues.add("TooFast")
-        
+
+        # --- FORM CHECKS (only at stable states to avoid noise) ---
+
+        # 1. Elbow drift check
+        if abs(elbow_pos[0] - hip_pos[0]) > 90:
+            arm_feedback.append(f"Keep {side} elbow close to body")
+            arm_issues.add("ElbowDrift")
+
+        # 2. Swing / momentum — only flag if we have enough history
+        shoulder_y_history.append(shoulder_pos[1])
+        if len(shoulder_y_history) >= 8:
+            swing_range = max(shoulder_y_history) - min(shoulder_y_history)
+            if swing_range > 55:
+                arm_feedback.append(f"Stop using momentum ({side})")
+                arm_issues.add("Swing")
+
+        # 3. Incomplete extension — only warn if arm is DOWN for too long after a rep attempt
+        if arm_state == 'DOWN' and elbow_angle < 140:
+            arm_feedback.append(f"Fully extend {side} arm at the bottom")
+            arm_issues.add("IncompleteExtension")
+
         # Write back
         if side == 'L':
             self.left_state = arm_state
@@ -122,7 +122,7 @@ class BicepCurlAnalyzer:
         else:
             self.right_state = arm_state
             self.right_rep_start = rep_start
-        
+
         return rep_completed, arm_issues, arm_feedback, arm_state
 
     def update(self, lm_dict):

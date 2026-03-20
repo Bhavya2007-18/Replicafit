@@ -3,6 +3,8 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
+config.watchFolders = [path.resolve(__dirname, '../strivio_core_engine')];
+
 config.resolver.assetExts.push('bin');
 config.resolver.assetExts.push('db');
 

@@ -18,11 +18,16 @@ class VideoStreamer:
         
         # Shared metrics
         self.reps = 0
+        self.left_reps = 0
+        self.right_reps = 0
         self.state = 'DOWN'
         self.feedback = []
         self.tempo = 0
         self.score = 0
         self.curl_progress = 0
+        self.rep_quality = 'N/A'
+        self.l_angle = 180.0
+        self.r_angle = 180.0
         
         # Start capture thread to prevent IO blocking
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)
@@ -42,16 +47,24 @@ class VideoStreamer:
             lm_dict = self.detector.extract_landmarks(results, w, h)
             
             analysis = self.analyzer.update(lm_dict)
-            
+
             # Update shared state
             with self.lock:
                 self.reps = self.analyzer.reps
+                self.left_reps = self.analyzer.left_reps
+                self.right_reps = self.analyzer.right_reps
                 self.state = self.analyzer.state
                 self.feedback = self.analyzer.feedback
                 self.tempo = self.analyzer.tempo
                 self.score = int(sum(self.analyzer.scores_history)/len(self.analyzer.scores_history)) if self.analyzer.scores_history else 0
+                # Latest per-rep quality label
+                if self.analyzer.scores_history:
+                    s = self.analyzer.scores_history[-1]
+                    self.rep_quality = 'Perfect' if s >= 95 else 'Good' if s >= 75 else 'Fair' if s >= 50 else 'Poor'
                 if analysis:
-                    self.curl_progress = analysis["progress"]
+                    self.curl_progress = analysis.get('progress', 0)
+                    self.l_angle = analysis.get('l_angle', 180.0)
+                    self.r_angle = analysis.get('r_angle', 180.0)
                     
             # Draw Skeleton based on new API format
             if results and results.pose_landmarks:
@@ -83,7 +96,7 @@ class VideoStreamer:
 
     def get_frame(self):
         while True:
-            time.sleep(0.03) # Cap to 30 FPS stream
+            time.sleep(0.001)  # Minimal sleep — push frames as fast as they arrive
             if self.latest_frame:
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + self.latest_frame + b'\r\n')

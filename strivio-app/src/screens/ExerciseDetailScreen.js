@@ -138,13 +138,19 @@ export default function ExerciseDetailScreen({ route, navigation }) {
           </View>
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 180 }} />
       </ScrollView>
 
       {/* Action Footer */}
       <View style={s.footer}>
         <TouchableOpacity style={s.startBtn} onPress={() => navigation.navigate('GuidedWorkout')}>
           <Text style={s.startBtnText}>INITIALIZE AI TRAINING</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[s.startBtn, { marginTop: 12, backgroundColor: '#ff4757', shadowColor: '#ff4757' }]} 
+          onPress={() => navigation.navigate('PythonWorkout', { exerciseId, exercise: ex })}
+        >
+          <Text style={s.startBtnText}>PYTHON AI TRAINING (BETA)</Text>
         </TouchableOpacity>
       </View>
 

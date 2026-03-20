@@ -14,6 +14,7 @@ import WorkoutPlansScreen from './src/screens/WorkoutPlansScreen';
 import ExerciseLibraryScreen from './src/screens/ExerciseLibraryScreen';
 import ExerciseDetailScreen from './src/screens/ExerciseDetailScreen';
 import GuidedWorkoutScreen from './src/screens/GuidedWorkoutScreen';
+import PythonWorkoutScreen from './src/screens/PythonWorkoutScreen';
 import DietGuidelinesScreen from './src/screens/DietGuidelinesScreen';
 import ProgressDashboardScreen from './src/screens/ProgressDashboardScreen';
 import GoalTrackingScreen from './src/screens/GoalTrackingScreen';
@@ -64,6 +65,7 @@ function AppNavigator() {
           <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} />
           <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
           <Stack.Screen name="GuidedWorkout" component={GuidedWorkoutScreen} />
+          <Stack.Screen name="PythonWorkout" component={PythonWorkoutScreen} />
           <Stack.Screen name="DietGuidelines" component={DietGuidelinesScreen} />
           <Stack.Screen name="ProgressDashboard" component={ProgressDashboardScreen} />
           <Stack.Screen name="GoalTracking" component={GoalTrackingScreen} />
