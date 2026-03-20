@@ -7,6 +7,8 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'web'
   ? 'http://localhost:5000/api'
   : 'http://localhost:5000/api');
 
+export const SOCKET_URL = API_URL.replace('/api', '');
+
 const getToken = async () => {
   return await AsyncStorage.getItem('strivio_token');
 };
@@ -35,6 +37,15 @@ const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+    });
+    return res.json();
+  },
+
+  verifyLoginMFA: async (userId, code) => {
+    const res = await fetch(`${API_URL}/auth/login/verify-mfa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, code }),
     });
     return res.json();
   },
@@ -161,6 +172,181 @@ const api = {
     });
     return res.json();
   },
+
+  // Wearable HealthKit Sync
+  syncHealthData: async (data) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/health-data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // ============ TRACKING ============
+  getBodyMeasurements: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/body-measurements`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
+  logBodyMeasurement: async (data) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/body-measurements`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  getSleepLogs: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/sleep`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
+  logSleep: async (data) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/sleep`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  getMoodLogs: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/mood`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
+  logMood: async (data) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/mood`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  getHydration: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/hydration`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
+  logHydration: async (data) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/hydration`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  startFasting: async (targetHours) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/fasting/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ targetHours }),
+    });
+    return res.json();
+  },
+  endFasting: async (id) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/fasting/${id}/end`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+  },
+  getFastingLogs: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/fasting`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
+  getDailyCheckin: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/daily-checkin`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
+
+  // ============ FOOD SEARCH ============
+  searchFood: async (query) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/tracking/food-search?q=${encodeURIComponent(query)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+  },
+
+  // ============ DEVICE INTEGRATIONS ============
+  getConnectedDevices: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/integrations/devices`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
+  connectGarmin: async (username, password) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/integrations/garmin/connect`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ username, password }),
+    });
+    return res.json();
+  },
+  connectFitbit: async (data) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/integrations/fitbit/connect`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  disconnectDevice: async (provider) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/integrations/devices/${provider}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+  },
+
+  // ============ FAMILY ACCESS ============
+  createFamily: async (name) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/integrations/family/create`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name }),
+    });
+    return res.json();
+  },
+  joinFamily: async (inviteCode) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/integrations/family/join`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ inviteCode }),
+    });
+    return res.json();
+  },
+  getFamily: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/integrations/family`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
+
+  // ============ MFA ============
+  setupMFA: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/auth/mfa/setup`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+  },
+  verifyMFA: async (code) => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/auth/mfa/verify`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code }),
+    });
+    return res.json();
+  },
+  getMFAStatus: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_URL}/auth/mfa/status`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.json();
+  },
 };
 
 export default api;
+

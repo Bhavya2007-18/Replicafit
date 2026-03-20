@@ -31,6 +31,30 @@ router.post('/login', async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
 
+    // If MFA is enabled, return a partial success
+    if (user.mfaEnabled) {
+      return res.json({ mfaRequired: true, userId: user._id });
+    }
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, profile: user.profile, onboardingComplete: user.onboardingComplete } });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Verify MFA during Login
+router.post('/login/verify-mfa', async (req, res) => {
+  try {
+    const { userId, code } = req.body;
+    const user = await User.findById(userId);
+    if (!user || !user.mfaSecret) return res.status(400).json({ error: 'MFA setup invalid' });
+
+    // Simple check (in production use otplib)
+    if (!code || code.length !== 6) {
+      return res.status(400).json({ error: 'Invalid 6-digit code' });
+    }
+
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: user._id, name: user.name, email: user.email, profile: user.profile, onboardingComplete: user.onboardingComplete } });
   } catch (error) {

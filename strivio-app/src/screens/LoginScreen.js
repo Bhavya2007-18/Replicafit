@@ -6,9 +6,13 @@ import { useAuth } from '../context/AuthContext';
 const { height } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
-  const { login, register, continueAsGuest } = useAuth();
+  const { login, register, verifyMFA, continueAsGuest } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
+  const [mfaMode, setMfaMode] = useState(false);
+  const [mfaUserId, setMfaUserId] = useState(null);
+  const [mfaCode, setMfaCode] = useState('');
+  
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,9 +23,22 @@ export default function LoginScreen({ navigation }) {
     setError('');
     setLoading(true);
     try {
+      if (mfaMode) {
+        const result = await verifyMFA(mfaUserId, mfaCode);
+        if (result.error) setError(result.error);
+        setLoading(false);
+        return;
+      }
+
       let result;
       if (isLogin) {
         result = await login(email, password);
+        if (result.mfaRequired) {
+          setMfaMode(true);
+          setMfaUserId(result.userId);
+          setLoading(false);
+          return;
+        }
       } else {
         if (!name.trim()) { setError('OPERATIVE NAME REQUIRED'); setLoading(false); return; }
         result = await register(name, email, password);
@@ -45,25 +62,44 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <View style={s.formBox}>
-            <Text style={s.formTitle}>{isLogin ? 'INITIALIZING UPLINK' : 'CREATING OPERATIVE'}</Text>
+            <Text style={s.formTitle}>{mfaMode ? 'MFA VERIFICATION' : isLogin ? 'INITIALIZING UPLINK' : 'CREATING OPERATIVE'}</Text>
 
-            {!isLogin && (
-              <TextInput style={s.input} placeholder="NAME / ID" placeholderTextColor={COLORS.textMuted} value={name} onChangeText={setName} />
+            {mfaMode ? (
+              <>
+                <Text style={s.mfaInfo}>Enter the 6-digit code from your authenticator app</Text>
+                <TextInput style={[s.input, { fontSize: 24, textAlign: 'center', letterSpacing: 8 }]} 
+                  placeholder="000000" placeholderTextColor={COLORS.textMuted} 
+                  value={mfaCode} onChangeText={setMfaCode} keyboardType="numeric" maxLength={6} />
+              </>
+            ) : (
+              <>
+                {!isLogin && (
+                  <TextInput style={s.input} placeholder="NAME / ID" placeholderTextColor={COLORS.textMuted} value={name} onChangeText={setName} />
+                )}
+                <TextInput style={s.input} placeholder="EMAIL ADDRESS" placeholderTextColor={COLORS.textMuted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                <TextInput style={s.input} placeholder="SECURE KEY" placeholderTextColor={COLORS.textMuted} value={password} onChangeText={setPassword} secureTextEntry />
+              </>
             )}
-            <TextInput style={s.input} placeholder="EMAIL ADDRESS" placeholderTextColor={COLORS.textMuted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-            <TextInput style={s.input} placeholder="SECURE KEY" placeholderTextColor={COLORS.textMuted} value={password} onChangeText={setPassword} secureTextEntry />
 
             {error ? <Text style={s.error}>{error}</Text> : null}
 
             <TouchableOpacity style={s.btn} onPress={handleSubmit} disabled={loading}>
-              <Text style={s.btnText}>{loading ? 'SYNCING...' : isLogin ? 'ENTER THE VAULT' : 'JOIN THE ELITE'}</Text>
+              <Text style={s.btnText}>{loading ? 'SYNCING...' : mfaMode ? 'VERIFY CODE' : isLogin ? 'ENTER THE VAULT' : 'JOIN THE ELITE'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={s.switchBtn} onPress={() => { setIsLogin(!isLogin); setError(''); }}>
-              <Text style={s.switchText}>
-                {isLogin ? "NEW OPERATIVE? REGISTER" : 'EXISTING OPERATIVE? LOGIN'}
-              </Text>
-            </TouchableOpacity>
+            {!mfaMode && (
+              <TouchableOpacity style={s.switchBtn} onPress={() => { setIsLogin(!isLogin); setError(''); }}>
+                <Text style={s.switchText}>
+                  {isLogin ? "NEW OPERATIVE? REGISTER" : 'EXISTING OPERATIVE? LOGIN'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {mfaMode && (
+              <TouchableOpacity style={s.switchBtn} onPress={() => { setMfaMode(false); setError(''); }}>
+                <Text style={s.switchText}>BACK TO LOGIN</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <TouchableOpacity style={s.guestBtn} onPress={continueAsGuest}>
@@ -112,6 +148,7 @@ const s = StyleSheet.create({
   },
   
   error: { color: COLORS.error, fontSize: 10, fontWeight: '800', marginBottom: SPACING.md, textAlign: 'center' },
+  mfaInfo: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '600', marginBottom: SPACING.xl, textAlign: 'center', lineHeight: 16 },
   
   btn: { 
     backgroundColor: COLORS.primaryContainer, 

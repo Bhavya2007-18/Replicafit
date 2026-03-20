@@ -180,4 +180,25 @@ router.get('/ai-insights', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ============ WEARABLE OS SYNC ============
+router.post('/health-data', auth, async (req, res) => {
+  try {
+    // Ingest data from SparkyFitness mobile adapters (Apple Health / Google Fit)
+    const { steps, calories, distance, date } = req.body;
+    
+    // For now we log it and update user xp or store it in a Daily metric
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Award 1 XP for every 100 steps
+    if (steps && steps > 0) {
+       user.xp += Math.floor(steps / 100);
+       user.level = Math.floor(user.xp / 500) + 1;
+       await user.save();
+    }
+    
+    res.status(200).json({ status: 'success', message: 'HealthKit data fused with Strivio Engine.' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

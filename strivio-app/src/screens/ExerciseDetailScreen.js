@@ -6,9 +6,21 @@ import { exerciseDatabase as exercises } from '../data/exerciseDatabase';
 const { width } = Dimensions.get('window');
 
 export default function ExerciseDetailScreen({ route, navigation }) {
-  const { exerciseId } = route.params;
-  const ex = exercises.find(e => e.id === exerciseId);
-  if (!ex) return null;
+  const { exerciseId, exercise: passedExercise } = route.params;
+  const ex = passedExercise || exercises.find(e => e.id === exerciseId || e._id === exerciseId);
+  
+  if (!ex) return (
+    <SafeAreaView style={s.container}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>🔍</Text>
+        <Text style={{ color: '#f5f5f5', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>EXERCISE NOT FOUND</Text>
+        <Text style={{ color: '#888', fontSize: 12, textAlign: 'center', marginBottom: 24 }}>This exercise could not be loaded.</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ backgroundColor: '#cafd00', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 99 }}>
+          <Text style={{ color: '#0a0a0a', fontWeight: '900', fontSize: 12 }}>GO BACK</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.container}>

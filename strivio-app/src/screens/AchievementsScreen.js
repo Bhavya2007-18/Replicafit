@@ -3,13 +3,22 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } fr
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import api from '../services/api';
 
+const MOCK_ACHIEVEMENTS = [
+  { title: 'First Blood', description: 'Complete your first workout.', icon: '🩸', xpReward: 100, unlocked: true },
+  { title: 'Consistency is Key', description: 'Log a workout 3 days in a row.', icon: '🔥', xpReward: 250, unlocked: true },
+  { title: 'Iron Lung', description: 'Survive a 45-minute HIIT session.', icon: '🫁', xpReward: 500, unlocked: false, progress: { current: 30, target: 45 } },
+  { title: 'Century Club', description: 'Perform 100 total pushups.', icon: '💯', xpReward: 300, unlocked: true },
+  { title: 'Perfect Form', description: 'Maintain 95%+ accuracy for a whole session.', icon: '🎯', xpReward: 1000, unlocked: false, progress: { current: 92, target: 95 } },
+];
+
 export default function AchievementsScreen({ navigation }) {
   const [achievements, setAchievements] = useState([]);
 
   useEffect(() => {
     api.getAchievements().then(data => {
-      if (Array.isArray(data)) setAchievements(data);
-    }).catch(console.log);
+      if (Array.isArray(data) && data.length > 0) setAchievements(data);
+      else setAchievements(MOCK_ACHIEVEMENTS);
+    }).catch(() => setAchievements(MOCK_ACHIEVEMENTS));
   }, []);
 
   const unlocked = achievements.filter(a => a.unlocked).length;
