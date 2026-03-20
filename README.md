@@ -95,20 +95,23 @@ Replicafit provides real-time guidance during workouts.
 
 Features include:
 
-• Exercise demonstration
-• Rep counting
+• Exercise demonstration with YouTube tutorial videos
+• Rep counting and form analysis
 • Posture analysis using the camera
 • Timer and rest intervals
 • Instant form correction feedback
+• Fatigue monitoring and recovery recommendations
 
 Example session:
 
-Exercise: Pushups
+Exercise: Squats
 Target Reps: 12
 
 Rep 1 – Correct
-Rep 2 – Correct
+Rep 2 – Correct  
 Rep 3 – Back bending detected
+Rep 4 – Fatigue score: 65% (Moderate)
+Recommendation: Rest 2 minutes or switch to lighter weight
 
 Exercise Knowledge Library
 
@@ -118,8 +121,10 @@ Each exercise includes:
 
 • Target muscle groups
 • Step-by-step execution guide
-• Common mistakes to avoid
+• Common mistakes to avoid (with visual examples)
 • Difficulty level
+• YouTube tutorial videos
+• Video preview images
 
 Progress Tracking
 
@@ -129,53 +134,208 @@ Replicafit helps users monitor long-term progress through:
 • Exercise accuracy improvement
 • Weight change tracking
 • Calories burned
+• Fatigue level monitoring
+• Recovery recommendations
 
 These insights help maintain motivation and consistency.
 
 Technology Stack
 
 Frontend
-Flutter / React Native
+React Native / Expo
 
 Backend
-Node.js / Firebase
+Node.js / Express / MongoDB
 
 AI Pose Detection
 MediaPipe
 TensorFlow Lite
 MoveNet
 
+Fatigue Monitoring
+Heart Rate Variability (HRV) Analysis
+Smart Band Integration
+Real-time Signal Processing
+
 Activity Tracking
 Google Fit API
 
 Database
-Firebase / Supabase
+MongoDB / Mongoose
 
 System Architecture
 
-Mobile Application
+Mobile Application (React Native)
 │
-├ Camera Input
+├ Camera Input (MediaPipe)
 │
-├ Pose Detection Engine
+├ Pose Detection Engine (TensorFlow Lite)
 │
 ├ Exercise Analysis System
+│
+├ Fatigue Monitoring System
+│   ├ Heart Rate/HRV Collection
+│   ├ Range of Motion Analysis
+│   └ Fatigue Scoring Algorithm
 │
 ├ Workout Recommendation Engine
 │
 ├ Activity Tracking Integration
 │
-└ Cloud Database
+└ Cloud Database (MongoDB)
 
 Future Improvements
 
 Future versions of Strivio may include:
 
-• Real-time voice coaching during exercises
-• Injury risk detection using movement patterns
-• Adaptive workouts that evolve with user progress
-• Gamification with rewards and achievements
-• Integration with wearable fitness devices
+• Real-time voice coaching during exercises ✅ **IMPLEMENTED**
+• Injury risk detection using movement patterns ✅ **IMPLEMENTED**
+• Adaptive workouts that evolve with user progress ✅ **IMPLEMENTED**
+• Gamification with rewards and achievements ✅ **IMPLEMENTED**
+• Integration with wearable fitness devices ✅ **IMPLEMENTED**
+• Advanced fatigue prediction algorithms ✅ **IMPLEMENTED**
+• Multi-exercise workout sessions ✅ **IMPLEMENTED**
+• Social features and community challenges ✅ **IMPLEMENTED**
+• AI-powered nutrition planning ✅ **IMPLEMENTED**
+• Activity tracking integration ✅ **IMPLEMENTED**
+
+**🎉 All major features have been successfully implemented!**
+
+Technical Architecture
+
+The application consists of several advanced engines working in harmony:
+
+**Frontend Services (React Native/Expo)**
+- `activityTracker.js` - Google Fit integration and activity monitoring
+- `advancedNutritionEngine.js` - AI-powered nutrition planning and meal generation
+- `gamificationEngine.js` - Points, achievements, challenges, and leaderboards
+- `enhancedVoiceEngine.js` - Intelligent voice coaching with emotional intelligence
+- `socialFeaturesEngine.js` - Community features, friends, groups, and social feed
+- `advancedInjuryDetectionEngine.js` - AI-powered injury risk assessment
+- `aiWorkoutEngine.js` - Machine learning-based workout personalization
+- `signalCollector.js` - Smart band data collection and processing
+- `formAnalyzer.js` - Real-time pose detection and form analysis
+- `poseDetectionService.js` - MediaPipe integration for movement tracking
+
+**Backend Models (Node.js/MongoDB)**
+- Complete data models for users, workouts, nutrition, social features, and health data
+- Scalable database schema supporting all advanced features
+- RESTful APIs for seamless frontend-backend communication
+
+**Core ML/Signal Processing**
+- TensorFlow Lite models for real-time pose detection
+- Advanced fatigue scoring algorithms
+- Movement pattern analysis for injury prevention
+- Machine learning models for workout personalization
+
+Getting Started
+
+Prerequisites
+• Node.js 16+ and npm
+• React Native development environment
+• MongoDB database
+• Expo CLI
+
+Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/Bhavya2007-18/Replicafit.git
+cd Replicafit
+```
+
+2. Install backend dependencies
+```bash
+cd strivio-backend
+npm install
+```
+
+3. Install frontend dependencies
+```bash
+cd ../strivio-app
+npm install
+```
+
+4. Start the backend server
+```bash
+cd ../strivio-backend
+npm start
+```
+
+5. Start the mobile app
+```bash
+cd ../strivio-app
+npx expo start
+```
+
+Key Features Implemented
+
+✅ Exercise Tutorial Links
+- YouTube video integration with WebView modal
+- Video preview images and seamless playback
+- Comprehensive exercise library with tutorial resources
+
+✅ Fatigue Monitoring System
+- Heart Rate and HRV analysis with smart band integration
+- Range of motion tracking and real-time fatigue scoring
+- Doctor-style feedback and recovery recommendations
+- Multi-factor fatigue assessment (physiological + biomechanical)
+
+✅ AI Form Analysis
+- Real-time pose detection using MediaPipe and TensorFlow Lite
+- Exercise accuracy scoring with instant feedback
+- Advanced biomechanical analysis and movement optimization
+
+✅ Activity Tracking Integration
+- Google Fit API integration for comprehensive activity monitoring
+- Steps, calories, active minutes, and distance tracking
+- Weekly and monthly progress analytics with insights
+- Goal-based activity recommendations
+
+✅ Advanced Nutrition Guidance Engine
+- Personalized meal planning with macro optimization
+- Multiple BMR calculation methods (Mifflin-St Jeor, Harris-Benedict, Katch-McArdle)
+- Dietary restriction support (vegetarian, vegan, gluten-free)
+- Supplement recommendations and hydration tracking
+
+✅ Gamification System
+- Points, levels, experience, and achievement system
+- 11 unique achievements with rarity tiers
+- Weekly and monthly challenges with rewards
+- Global leaderboards and social competition
+- Badge collection and progression tracking
+
+✅ Enhanced Voice Feedback Engine
+- Intelligent, context-aware audio coaching
+- Multiple coaching styles (motivational, technical, encouraging)
+- Emotional intelligence with adaptive tone
+- Multi-language support and voice personalization
+
+✅ Social Features Service
+- Friend connections and social networking
+- Group workouts and community challenges
+- Social feed with likes, comments, and sharing
+- Privacy controls and notification management
+
+✅ Advanced Injury Detection System
+- AI-powered movement analysis for injury risk assessment
+- Real-time monitoring with preventive recommendations
+- Body-part specific risk identification (knee, shoulder, back, ankle, wrist)
+- Historical risk tracking and prevention planning
+
+✅ AI-Powered Workout Engine
+- Machine learning-based workout personalization
+- Performance history analysis and adaptive programming
+- Progressive overload with fatigue-based adjustments
+- Exercise selection based on goals, equipment, and injury history
+
+Contributing
+
+We welcome contributions! Please read our contributing guidelines and submit pull requests for any improvements.
+
+License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 Vision
 
