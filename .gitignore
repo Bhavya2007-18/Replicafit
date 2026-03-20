@@ -1,0 +1,41 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environments
+.env
+.venv
+venv/
+env/
+ENV/
+ai_fitness_app/venv12/
+
+# MediaPipe models
+models/*.task
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Session logs
+*_session_log.json
+
+# Node modules
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Python package distribution
+dist/
+build/
+*.egg-info/

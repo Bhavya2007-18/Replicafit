@@ -28,7 +28,7 @@ def get_metrics():
             "state": streamer.state,
             "score": streamer.score,
             "tempo": streamer.tempo,
-            "depth_progress": streamer.depth_progress,
+            "curl_progress": streamer.curl_progress,
             "fps": streamer.fps,
             "feedback": streamer.feedback
         })

@@ -1,1 +1,1 @@
-web: python flask_squat_api.py
+web: gunicorn flask_squat_api:app

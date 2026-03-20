@@ -5,7 +5,7 @@ import base64
 import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from ai_squat_coach import PoseDetector, SquatAnalyzer
+from ai_squat_coach import PoseDetector, BicepCurlAnalyzer
 
 # 1. SETUP LOGGING
 logging.basicConfig(
@@ -18,10 +18,8 @@ app = Flask(__name__)
 CORS(app)
 
 # 2. INITIALIZE ENGINES
-# Note: In a production multi-user system, you would use a session manager.
-# For this deployment, we use a single instance for the demo user.
 detector = PoseDetector()
-analyzer = SquatAnalyzer()
+analyzer = BicepCurlAnalyzer()
 
 @app.route('/process_frame', methods=['POST'])
 def process_frame():
@@ -48,13 +46,10 @@ def process_frame():
         results = detector.process_frame(img)
         lm_dict = detector.extract_landmarks(results, w, h)
         
-        # 2. SQUAT ANALYSIS
-        # This updates the stateful 'analyzer' object
+        # 2. BICEP CURL ANALYSIS
         analysis_data = analyzer.update(lm_dict)
         
         # 3. PREPARE RESPONSE DATA
-        # We send back landmarks instead of the whole image to save bandwidth.
-        # The frontend will render the skeleton.
         landmarks = []
         if results.pose_landmarks:
             for lm in results.pose_landmarks.landmark:
@@ -67,10 +62,12 @@ def process_frame():
 
         response = {
             "reps": analyzer.reps,
+            "left_reps": analyzer.left_reps,
+            "right_reps": analyzer.right_reps,
             "state": analyzer.state,
             "feedback": list(analyzer.feedback_msgs),
             "tempo": analyzer.tempo,
-            "depth": analysis_data.get("depth_score", 0) if analysis_data else 0,
+            "curl_progress": analysis_data.get("progress", 0) if analysis_data else 0,
             "landmarks": landmarks,
             "score": int(np.mean(analyzer.rep_scores)) if analyzer.rep_scores else 0
         }
@@ -83,12 +80,9 @@ def process_frame():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "healthy", "engine": "MediaPipe Pose"}), 200
+    return jsonify({"status": "healthy", "engine": "MediaPipe Pose", "exercise": "bicep_curl"}), 200
 
 if __name__ == '__main__':
-    # Cloud providers like Railway/Heroku assign a port via the PORT env variable
     port = int(os.environ.get("PORT", 5000))
-    logger.info(f"🚀 Starting Production API on 0.0.0.0:{port}")
-    
-    # Debug=False for production deployment
+    logger.info(f"🚀 Starting Bicep Curl API on 0.0.0.0:{port}")
     app.run(host='0.0.0.0', port=port, debug=False)

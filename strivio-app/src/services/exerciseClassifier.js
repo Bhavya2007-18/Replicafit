@@ -151,16 +151,22 @@ const EXERCISE_PATTERNS = {
     detect: (angles, orientation) => {
       // Allow upright or unknown (if hips cut off)
       if (orientation === 'horizontal') return 0;
-      const lElbow = angles.leftElbow || 180;
-      const rElbow = angles.rightElbow || 180;
-      const lShoulder = angles.leftShoulder || 0;
-      const rShoulder = angles.rightShoulder || 0;
-      
-      // Bicep curl: elbows bending, shoulders relatively stable (arms at side)
-      if ((lElbow < 140 || rElbow < 140) && (lShoulder < 50 && rShoulder < 50)) return 0.9;
-      if ((lElbow < 160 || rElbow < 160) && (lShoulder < 50 && rShoulder < 50)) return 0.6;
-      if (lShoulder < 50 && rShoulder < 50) return 0.35; // Base score for arms tucked
-      return 0.1;
+      const lElbow = angles.leftElbow ?? 180;
+      const rElbow = angles.rightElbow ?? 180;
+      const minElbow = Math.min(lElbow, rElbow);
+
+      // Core signal: at least one elbow is flexing (< 160°) and arms are NOT fully raised overhead
+      const lShoulder = angles.leftShoulder ?? 0;
+      const rShoulder = angles.rightShoulder ?? 0;
+      const shoulderRaised = lShoulder > 80 || rShoulder > 80; // arms raised = jumping jack territory
+
+      if (!shoulderRaised) {
+        if (minElbow < 100) return 0.95;  // strong curl
+        if (minElbow < 140) return 0.75;  // mid-curl
+        if (minElbow < 165) return 0.5;   // slight bend, possible start/end
+        return 0.3;                         // arms at side, could be idle position
+      }
+      return 0.05; // arms raised overhead — probably NOT a curl
     },
   },
 };

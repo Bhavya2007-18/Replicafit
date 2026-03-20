@@ -3,12 +3,12 @@ import time
 import threading
 import mediapipe as mp
 from pose_detector import PoseDetector
-from squat_analyzer import SquatAnalyzer
+from curl_analyzer import BicepCurlAnalyzer
 
 class VideoStreamer:
     def __init__(self):
         self.detector = PoseDetector()
-        self.analyzer = SquatAnalyzer()
+        self.analyzer = BicepCurlAnalyzer()
         self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -18,11 +18,11 @@ class VideoStreamer:
         
         # Shared metrics
         self.reps = 0
-        self.state = 'STANDING'
+        self.state = 'DOWN'
         self.feedback = []
         self.tempo = 0
         self.score = 0
-        self.depth_progress = 0
+        self.curl_progress = 0
         
         # Start capture thread to prevent IO blocking
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)
@@ -51,7 +51,7 @@ class VideoStreamer:
                 self.tempo = self.analyzer.tempo
                 self.score = int(sum(self.analyzer.scores_history)/len(self.analyzer.scores_history)) if self.analyzer.scores_history else 0
                 if analysis:
-                    self.depth_progress = analysis["progress"]
+                    self.curl_progress = analysis["progress"]
                     
             # Draw Skeleton based on new API format
             if results and results.pose_landmarks:

@@ -38,6 +38,7 @@ export default function GuidedWorkoutScreen({ navigation }) {
   const [enablePostureCorrection, setEnablePostureCorrection] = useState(true);
   const [poseErrors, setPoseErrors] = useState([]);
   const [fatigueLevel, setFatigueLevel] = useState('low');
+  const [curlAngles, setCurlAngles] = useState({ leftElbow: 180, rightElbow: 180, elbowAngle: 180 });
 
   const cameraRef = useRef(null);
   const timerRef = useRef(null);
@@ -135,6 +136,14 @@ export default function GuidedWorkoutScreen({ navigation }) {
           setPoseErrors(formResult.errors || []);
           if (formResult.feedback && formResult.feedback.length > 0) {
             setFeedback(formResult.feedback[0].toUpperCase());
+          }
+          // Capture per-arm curl angles for the HUD
+          if (classification.exercise === 'bicep_curls' && formResult.angles) {
+            setCurlAngles({
+              leftElbow: formResult.angles.leftElbow ?? 180,
+              rightElbow: formResult.angles.rightElbow ?? 180,
+              elbowAngle: formResult.angles.elbowAngle ?? 180,
+            });
           }
 
           if (formResult.angles && classification.exercise) {
@@ -280,6 +289,35 @@ export default function GuidedWorkoutScreen({ navigation }) {
           <Text style={[s.pillText, isPaused && { color: COLORS.error }]}>{feedback}</Text>
         </View>
 
+        {/* Bicep Curl Arm HUD — only shown when doing curls */}
+        {isActive && exercise === 'bicep_curls' && (
+          <View style={s.curlHud}>
+            <Text style={s.curlHudTitle}>💪 CURL TRACKER</Text>
+            <View style={s.curlArms}>
+              <View style={s.curlArmBox}>
+                <Text style={s.curlArmLabel}>LEFT</Text>
+                <Text style={s.curlArmAngle}>{Math.round(curlAngles.leftElbow)}°</Text>
+                <View style={s.curlBarBg}>
+                  <View style={[s.curlBarFill, {
+                    height: `${Math.round(Math.max(0, Math.min(100, (180 - curlAngles.leftElbow) / 1.5)))}%`,
+                    backgroundColor: curlAngles.leftElbow < 80 ? '#00FF88' : '#FF9500'
+                  }]} />
+                </View>
+              </View>
+              <View style={s.curlArmBox}>
+                <Text style={s.curlArmLabel}>RIGHT</Text>
+                <Text style={s.curlArmAngle}>{Math.round(curlAngles.rightElbow)}°</Text>
+                <View style={s.curlBarBg}>
+                  <View style={[s.curlBarFill, {
+                    height: `${Math.round(Math.max(0, Math.min(100, (180 - curlAngles.rightElbow) / 1.5)))}%`,
+                    backgroundColor: curlAngles.rightElbow < 80 ? '#00FF88' : '#FF9500'
+                  }]} />
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         {!isActive && !summary && (
           <View style={s.idleOverlay}>
             <Text style={s.idleText}>{modelLoading ? 'AI INITIALIZING...' : 'READY FOR TRAINING'}</Text>
@@ -405,6 +443,34 @@ const s = StyleSheet.create({
     zIndex: 20
   },
   pillText: { fontSize: 10, fontWeight: '900', color: COLORS.primaryContainer, letterSpacing: 1 },
+
+  curlHud: {
+    position: 'absolute',
+    bottom: 80,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    borderRadius: 14,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,136,0.3)',
+    zIndex: 20,
+    minWidth: 110,
+  },
+  curlHudTitle: { fontSize: 9, fontWeight: '900', color: '#00FF88', letterSpacing: 1, marginBottom: 6 },
+  curlArms: { flexDirection: 'row', gap: 8 },
+  curlArmBox: { alignItems: 'center' },
+  curlArmLabel: { fontSize: 9, color: '#aaa', fontWeight: '700', marginBottom: 2 },
+  curlArmAngle: { fontSize: 14, fontWeight: '900', color: '#fff', marginBottom: 4 },
+  curlBarBg: {
+    width: 16,
+    height: 70,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  curlBarFill: { width: '100%', borderRadius: 8 },
 
   controlsScroll: { flex: 1, padding: SPACING.xl },
   alertBox: { backgroundColor: 'rgba(255,115,81,0.1)', padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.xl, borderWidth: 1, borderColor: COLORS.error },

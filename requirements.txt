@@ -1,8 +1,9 @@
-flask
-flask-cors
-opencv-python-headless
-mediapipe<0.10.30
-numpy
-pyttsx3
-requests
-python-dotenv
+flask==3.0.3
+numpy==1.26.4
+opencv-python==4.9.0.80
+mediapipe==0.10.14
+gunicorn==22.0.0
+flask-cors==4.0.1
+pyttsx3==2.90
+requests==2.31.0
+python-dotenv==1.0.1

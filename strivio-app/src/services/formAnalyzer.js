@@ -204,23 +204,35 @@ const analyzeBicepCurlsForm = (keypoints) => {
 
   if (!lShoulder || !lElbow || !lWrist) return null;
 
-  const elbowAngle = calculateAngle(lShoulder, lElbow, lWrist);
-  // If hip is missing (e.g. waist up camera), calculate relative to a vertical drop from shoulder
+  // Per-arm angle calculation — rShoulder/rElbow/rWrist already declared above
+
+  const leftElbowAngle = calculateAngle(lShoulder, lElbow, lWrist);
+  const rightElbowAngle = rShoulder && rElbow && rWrist ? calculateAngle(rShoulder, rElbow, rWrist) : leftElbowAngle;
+  const elbowAngle = Math.min(leftElbowAngle, rightElbowAngle); // Track most active arm
+
   const verticalRef = { x: lShoulder.x, y: lShoulder.y + 0.5 };
-  const shoulderAngle = lHip ? calculateAngle(lElbow, lShoulder, lHip) : calculateAngle(lElbow, lShoulder, verticalRef);
+  const shoulderAngle = lHip
+    ? calculateAngle(lElbow, lShoulder, lHip)
+    : calculateAngle(lElbow, lShoulder, verticalRef);
 
   const ideal = IDEAL_FORMS.bicep_curls;
-  const scores = {
-    elbowAngle: scoreAngle(elbowAngle, ideal.elbowAngle),
-    shoulderAngle: scoreAngle(shoulderAngle, ideal.shoulderAngle)
+  const elbowScore = scoreAngle(elbowAngle, ideal.elbowAngle);
+  const shoulderScore = scoreAngle(shoulderAngle, ideal.shoulderAngle);
+  const totalAccuracy = Math.round(elbowScore * 0.6 + shoulderScore * 0.4);
+
+  const feedback = [];
+  if (shoulderAngle > 35) feedback.push('Keep elbows pinned to your sides');
+  if (Math.abs(leftElbowAngle - rightElbowAngle) > 25) feedback.push('Curl both arms evenly');
+  if (elbowAngle > 155 && elbowAngle < 170) feedback.push('Fully curl at the top');
+  if (feedback.length === 0) feedback.push('Great form! Keep it up');
+
+  return {
+    accuracy: totalAccuracy,
+    scores: { elbowAngle: elbowScore, shoulderAngle: shoulderScore },
+    feedback,
+    errors: [],
+    angles: { elbowAngle, leftElbow: leftElbowAngle, rightElbow: rightElbowAngle, shoulderAngle },
   };
-
-  const totalAccuracy = Math.round(
-    scores.elbowAngle * ideal.elbowAngle.weight +
-    scores.shoulderAngle * ideal.shoulderAngle.weight
-  );
-
-  return { accuracy: totalAccuracy, scores, feedback: ['Keep elbows tucked'], errors: [], angles: { elbowAngle, shoulderAngle } };
 };
 
 /**
@@ -281,11 +293,11 @@ export const analyzeForm = (keypoints, exercise, isReliable) => {
  */
 const DEBOUNCE_MS = 600; // stricter debounce to prevent double counting jitter
 const REP_THRESHOLDS = {
-  squats:   { enter: 120, exit: 160, type: 'flexion' }, // knee flexes
-  pushups:  { enter: 100, exit: 150, type: 'flexion' }, // elbow flexes
-  lunges:   { enter: 110, exit: 150, type: 'flexion' }, // knee flexes
-  jumping_jacks: { enter: 140, exit: 60, type: 'extension' }, // arms raise up
-  bicep_curls: { enter: 90, exit: 140, type: 'flexion' }, // elbow flexes
+  squats:        { enter: 120, exit: 160, type: 'flexion' }, // knee flexes
+  pushups:       { enter: 100, exit: 150, type: 'flexion' }, // elbow flexes
+  lunges:        { enter: 110, exit: 150, type: 'flexion' }, // knee flexes
+  jumping_jacks: { enter: 140, exit: 60,  type: 'extension' }, // arms raise
+  bicep_curls:   { enter: 130, exit: 150, type: 'flexion' }, // elbow flexes from ~165° down past 130°, then back above 150° = rep
 };
 
 let repState = { phase: 'IDLE', reps: 0, lastRepTime: 0, repStartTime: 0 };
@@ -302,7 +314,13 @@ export const detectRep = (rawAngles, exercise) => {
   let primaryAngle = 180;
   if (exercise === 'pushups') primaryAngle = angles.elbowAngle || angles.leftElbow || 180;
   else if (exercise === 'jumping_jacks') primaryAngle = angles.shoulderAngle || angles.leftShoulder || 0;
-  else if (exercise === 'bicep_curls') primaryAngle = angles.elbowAngle || angles.leftElbow || 180;
+  else if (exercise === 'bicep_curls') {
+    // Use the average of both elbows if available, otherwise whichever is detected
+    const l = angles.leftElbow ?? angles.elbowAngle ?? 180;
+    const r = angles.rightElbow ?? 180;
+    // Use the arm that's most actively bending (minimum angle)
+    primaryAngle = Math.min(l, r);
+  }
   else primaryAngle = angles.kneeAngle || angles.frontKnee || angles.leftKnee || 180;
 
   const now = Date.now();
