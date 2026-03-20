@@ -30,6 +30,7 @@ const connectDB = async () => {
         { name: 'Pullups', targetMuscles: ['Latissimus Dorsi', 'Biceps', 'Upper Back', 'Core'], difficulty: 'Advanced', category: 'strength', instructions: ['Grip bar, palms away.', 'Hang with arms extended.', 'Pull up until chin clears bar.', 'Lower with control.'], commonMistakes: ['Using momentum.', 'Incomplete range of motion.', 'Shoulders shrugging.'] },
         { name: 'Plank', targetMuscles: ['Core', 'Shoulders', 'Back'], difficulty: 'Beginner', category: 'strength', instructions: ['Start on forearms and toes.', 'Elbows under shoulders.', 'Straight line head to heels.', 'Hold while bracing core.'], commonMistakes: ['Hips too high.', 'Hips sagging.', 'Straining neck.'] },
         { name: 'Leg Raises', targetMuscles: ['Lower Abs', 'Hip Flexors'], difficulty: 'Intermediate', category: 'strength', instructions: ['Lie flat, legs straight.', 'Arms by sides.', 'Lift legs to ceiling.', 'Lower without touching floor.'], commonMistakes: ['Arching lower back.', 'Using momentum.', 'Bending knees.'] },
+        { name: 'Bicep Curls', targetMuscles: ['Biceps', 'Forearms'], difficulty: 'Beginner', category: 'strength', instructions: ['Stand tall holding dumbbells.', 'Keep elbows tucked tightly.', 'Curl the weights upward.', 'Slowly lower back down.'], commonMistakes: ['Swinging the torso.', 'Moving elbows forward.', 'Not extending fully.'] },
       ]);
 
       const { Challenge } = require('../models/Other');
@@ -38,7 +39,7 @@ const connectDB = async () => {
         { title: '10K Daily Steps', description: 'Walk 10,000 steps every day for two weeks.', type: 'cardio', icon: '🏃', startDate: new Date(), endDate: new Date(Date.now() + 14 * 86400000) },
         { title: 'Pushup Mastery', description: 'Complete 1000 total pushups in 30 days.', type: 'strength', icon: '🏆', startDate: new Date(), endDate: new Date(Date.now() + 30 * 86400000) },
       ]);
-      console.log('Seed complete: 6 exercises, 3 challenges');
+      console.log('Seed complete: 7 exercises, 3 challenges');
     }
   } catch (error) {
     console.error('MongoDB connection error:', error.message);

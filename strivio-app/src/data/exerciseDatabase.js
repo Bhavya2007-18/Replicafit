@@ -11,9 +11,9 @@ export const exerciseDatabase = [
       { text: 'Push through your heels to return to the starting position.', image: 'https://tse1.mm.bing.net/th?q=squat+standing+up+power' }
     ],
     commonMistakes: [
-      'Knees caving inwards.',
-      'Rounding the lower back.',
-      'Lifting heels off the ground.'
+      { text: 'Knees caving inwards.', image: 'https://tse1.mm.bing.net/th?q=squat+mistake+knees+caving+valgus' },
+      { text: 'Rounding the lower back.', image: 'https://tse1.mm.bing.net/th?q=squat+mistake+rounded+back+butt+wink' },
+      { text: 'Lifting heels off the ground.', image: 'https://tse1.mm.bing.net/th?q=squat+mistake+heels+lifting' }
     ],
     tutorialUrl: 'https://www.youtube.com/watch?v=aclHkVaku9U',
     videoPreviewUrl: 'https://img.youtube.com/vi/aclHkVaku9U/0.jpg'
@@ -118,5 +118,24 @@ export const exerciseDatabase = [
       { text: 'Using momentum instead of controlled motion.', image: 'https://tse1.mm.bing.net/th?q=leg+raises+mistake+momentum+swinging' },
       { text: 'Bending the knees excessively.', image: 'https://tse1.mm.bing.net/th?q=leg+raises+mistake+bent+knees' }
     ]
+  },
+  {
+    id: 'bicep_curls',
+    name: 'Bicep Curls',
+    targetMuscles: ['Biceps', 'Forearms'],
+    difficulty: 'Beginner',
+    instructions: [
+      { text: 'Stand tall holding dumbbells by your sides with palms facing forward.', image: 'https://tse1.mm.bing.net/th?q=bicep+curl+starting+position' },
+      { text: 'Keep your chest up and elbows tucked close to your torso.', image: 'https://tse1.mm.bing.net/th?q=bicep+curl+elbows+tucked' },
+      { text: 'Curl the weights upward while contracting your biceps.', image: 'https://tse1.mm.bing.net/th?q=bicep+curl+lifting+phase' },
+      { text: 'Slowly lower the weights back to full extension.', image: 'https://tse1.mm.bing.net/th?q=bicep+curl+lowering+phase' }
+    ],
+    commonMistakes: [
+      { text: 'Swinging the torso to use momentum.', image: 'https://tse1.mm.bing.net/th?q=bicep+curl+mistake+swinging+torso' },
+      { text: 'Moving elbows forward instead of keeping them pinned.', image: 'https://tse1.mm.bing.net/th?q=bicep+curl+mistake+elbows+forward' },
+      { text: 'Not fully extending arms at the bottom.', image: 'https://tse1.mm.bing.net/th?q=bicep+curl+mistake+half+rep' }
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=ykJmrZ5v0Oo',
+    videoPreviewUrl: 'https://img.youtube.com/vi/ykJmrZ5v0Oo/0.jpg'
   }
 ];
