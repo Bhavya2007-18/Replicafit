@@ -1,8 +1,11 @@
+import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-react-native';
 
 import LoginScreen from './src/screens/LoginScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
@@ -59,6 +62,32 @@ function AppNavigator() {
 }
 
 function App() {
+  const [isTfReady, setIsTfReady] = useState(false);
+
+  useEffect(() => {
+    async function initTf() {
+      try {
+        console.log('🔄 Initializing AI Engine...');
+        await tf.ready();
+        setIsTfReady(true);
+        console.log('✅ TF.js is ready');
+      } catch (err) {
+        console.warn('⚠️ TF.js init failed (App will continue in fallback mode):', err.message);
+        setIsTfReady(true); // Don't block the app if AI fails
+      }
+    }
+    initTf();
+  }, []);
+
+  if (!isTfReady) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#d4af35" />
+        <Text style={{ color: '#aaa', marginTop: 10 }}>Initializing AI Engine...</Text>
+      </View>
+    );
+  }
+
   return (
     <AuthProvider>
       <NavigationContainer>
