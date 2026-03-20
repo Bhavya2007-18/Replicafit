@@ -95,20 +95,23 @@ Replicafit provides real-time guidance during workouts.
 
 Features include:
 
-• Exercise demonstration
-• Rep counting
+• Exercise demonstration with YouTube tutorial videos
+• Rep counting and form analysis
 • Posture analysis using the camera
 • Timer and rest intervals
 • Instant form correction feedback
+• Fatigue monitoring and recovery recommendations
 
 Example session:
 
-Exercise: Pushups
+Exercise: Squats
 Target Reps: 12
 
 Rep 1 – Correct
-Rep 2 – Correct
+Rep 2 – Correct  
 Rep 3 – Back bending detected
+Rep 4 – Fatigue score: 65% (Moderate)
+Recommendation: Rest 2 minutes or switch to lighter weight
 
 Exercise Knowledge Library
 
@@ -118,8 +121,10 @@ Each exercise includes:
 
 • Target muscle groups
 • Step-by-step execution guide
-• Common mistakes to avoid
+• Common mistakes to avoid (with visual examples)
 • Difficulty level
+• YouTube tutorial videos
+• Video preview images
 
 Progress Tracking
 
@@ -129,43 +134,55 @@ Replicafit helps users monitor long-term progress through:
 • Exercise accuracy improvement
 • Weight change tracking
 • Calories burned
+• Fatigue level monitoring
+• Recovery recommendations
 
 These insights help maintain motivation and consistency.
 
 Technology Stack
 
 Frontend
-Flutter / React Native
+React Native / Expo
 
 Backend
-Node.js / Firebase
+Node.js / Express / MongoDB
 
 AI Pose Detection
 MediaPipe
 TensorFlow Lite
 MoveNet
 
+Fatigue Monitoring
+Heart Rate Variability (HRV) Analysis
+Smart Band Integration
+Real-time Signal Processing
+
 Activity Tracking
 Google Fit API
 
 Database
-Firebase / Supabase
+MongoDB / Mongoose
 
 System Architecture
 
-Mobile Application
+Mobile Application (React Native)
 │
-├ Camera Input
+├ Camera Input (MediaPipe)
 │
-├ Pose Detection Engine
+├ Pose Detection Engine (TensorFlow Lite)
 │
 ├ Exercise Analysis System
+│
+├ Fatigue Monitoring System
+│   ├ Heart Rate/HRV Collection
+│   ├ Range of Motion Analysis
+│   └ Fatigue Scoring Algorithm
 │
 ├ Workout Recommendation Engine
 │
 ├ Activity Tracking Integration
 │
-└ Cloud Database
+└ Cloud Database (MongoDB)
 
 Future Improvements
 
@@ -176,6 +193,75 @@ Future versions of Strivio may include:
 • Adaptive workouts that evolve with user progress
 • Gamification with rewards and achievements
 • Integration with wearable fitness devices
+• Advanced fatigue prediction algorithms
+• Multi-exercise workout sessions
+• Social features and community challenges
+
+Getting Started
+
+Prerequisites
+• Node.js 16+ and npm
+• React Native development environment
+• MongoDB database
+• Expo CLI
+
+Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/Bhavya2007-18/Replicafit.git
+cd Replicafit
+```
+
+2. Install backend dependencies
+```bash
+cd strivio-backend
+npm install
+```
+
+3. Install frontend dependencies
+```bash
+cd ../strivio-app
+npm install
+```
+
+4. Start the backend server
+```bash
+cd ../strivio-backend
+npm start
+```
+
+5. Start the mobile app
+```bash
+cd ../strivio-app
+npx expo start
+```
+
+Key Features Implemented
+
+✅ Exercise Tutorial Links
+- YouTube video integration
+- WebView modal for tutorials
+- Video preview images
+
+✅ Fatigue Monitoring System
+- Heart Rate and HRV analysis
+- Range of motion tracking
+- Real-time fatigue scoring
+- Doctor-style feedback
+
+✅ AI Form Analysis
+- Real-time pose detection
+- Exercise accuracy scoring
+- Instant feedback and corrections
+
+Contributing
+
+We welcome contributions! Please read our contributing guidelines and submit pull requests for any improvements.
+
+License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 Vision
 
