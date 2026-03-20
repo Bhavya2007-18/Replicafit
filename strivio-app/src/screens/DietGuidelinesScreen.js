@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Dimensions } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
-import { calculateMacros } from '../services/nutritionEngine';
-import { getDailyTargets, getRemainingMacros, getGuidance } from '../services/nutritionGuidanceEngine';
+import { getDailyTargets, getGuidance, QUICK_ADD_PRESETS } from '../services/nutritionGuidanceEngine';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import BottomNavBar from '../components/BottomNavBar';
+
+const { width } = Dimensions.get('window');
 
 export default function DietGuidelinesScreen({ navigation }) {
   const { user } = useAuth();
@@ -16,113 +19,217 @@ export default function DietGuidelinesScreen({ navigation }) {
   const targets = getDailyTargets(profile);
 
   useEffect(() => {
-    api.getNutritionLogs().then(data => {
-      if (Array.isArray(data)) setLogs(data);
-    }).catch(console.log);
+    fetchLogs();
   }, []);
 
+  const fetchLogs = async () => {
+    try {
+      const data = await api.getNutritionLogs();
+      if (Array.isArray(data)) setLogs(data);
+    } catch (e) { console.log(e); }
+  };
+
   const todayLog = logs.find(l => new Date(l.date).toDateString() === new Date().toDateString());
-  const todayCalories = todayLog?.totalCalories || 0;
-  const todayProtein = todayLog?.totalProtein || 0;
-  const todayCarbs = todayLog?.totalCarbs || 0;
-  const todayFats = todayLog?.totalFats || 0;
+  const stats = {
+    calories: todayLog?.totalCalories || 0,
+    protein: todayLog?.totalProtein || 0,
+    carbs: todayLog?.totalCarbs || 0,
+    fat: todayLog?.totalFats || 0
+  };
 
-  const guidance = getGuidance(targets, { 
-    totalCalories: todayCalories, 
-    totalProtein: todayProtein,
-    totalCarbs: todayCarbs,
-    totalFat: todayFats
-  });
+  const guidance = getGuidance(targets, stats);
+  const { remaining } = guidance;
 
-  const remaining = guidance.remaining;
-
-  const logMeal = async () => {
-    if (!mealName || !mealCalories) return;
-    const cal = parseInt(mealCalories) || 0;
-    const proteinTarget = Math.round(cal * 0.15); // Standard assumption for general logging
-    const carbsTarget = Math.round(cal * 0.12);
-    const fatTarget = Math.round(cal * 0.05);
+  const logMeal = async (name, cal, p, c, f) => {
+    const meal = { 
+      name: name || mealName, 
+      calories: parseInt(cal || mealCalories) || 0,
+      protein: p || Math.round((cal || mealCalories) * 0.15),
+      carbs: c || Math.round((cal || mealCalories) * 0.12),
+      fats: f || Math.round((cal || mealCalories) * 0.05)
+    };
 
     await api.logNutrition({
-      meals: [{ name: mealName, calories: cal, protein: proteinTarget, carbs: carbsTarget, fats: fatTarget }],
-      totalCalories: todayCalories + cal,
-      totalProtein: todayProtein + proteinTarget,
-      totalCarbs: todayCarbs + carbsTarget,
-      totalFats: todayFats + fatTarget,
+      meals: [meal],
+      totalCalories: stats.calories + meal.calories,
+      totalProtein: stats.protein + meal.protein,
+      totalCarbs: stats.carbs + meal.carbs,
+      totalFats: stats.fat + meal.fats,
     });
+    
     setMealName('');
     setMealCalories('');
-    const updated = await api.getNutritionLogs();
-    if (Array.isArray(updated)) setLogs(updated);
+    fetchLogs();
   };
 
   return (
     <SafeAreaView style={s.container}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <Text style={s.title}>Nutrition Tracker</Text>
-
-        <View style={s.macroRow}>
-          <View style={s.macroCard}><Text style={s.macroValue}>{remaining.calories}</Text><Text style={s.macroLabel}>Cal Left</Text></View>
-          <View style={s.macroCard}><Text style={s.macroValue}>{remaining.protein}g</Text><Text style={s.macroLabel}>Prot Left</Text></View>
-          <View style={s.macroCard}><Text style={s.macroValue}>{targets.protein}g</Text><Text style={s.macroLabel}>Prot Goal</Text></View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        
+        {/* Header */}
+        <View style={s.header}>
+          <Text style={s.logo}>FUEL PRECISION</Text>
+          <Text style={s.subText}>OPTIMIZING METABOLIC OUTPUT</Text>
         </View>
 
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Guidance: {guidance.insights[0]}</Text>
-          <View style={s.progressRow}><Text style={s.progressLabel}>Daily Calories</Text><View style={s.barBg}><View style={[s.barFill, { width: `${Math.min(100, (todayCalories / targets.calories) * 100)}%` }]} /></View><Text style={s.progressVal}>{todayCalories} / {targets.calories} cal</Text></View>
-          <View style={s.progressRow}><Text style={s.progressLabel}>Daily Protein</Text><View style={s.barBg}><View style={[s.barFill, { width: `${Math.min(100, (todayProtein / targets.protein) * 100)}%`, backgroundColor: COLORS.success }]} /></View><Text style={s.progressVal}>{todayProtein} / {targets.protein}g</Text></View>
+        {/* Macro Rings Hero */}
+        <View style={s.heroCard}>
+          <View style={s.ringsRow}>
+            <MacroRing label="PRO" current={stats.protein} target={targets.protein} color={COLORS.primaryContainer} />
+            <MacroRing label="CHO" current={stats.carbs} target={targets.carbs} color={COLORS.secondary} />
+            <MacroRing label="FAT" current={stats.fat} target={targets.fat} color="#fff" />
+          </View>
+          <View style={s.calCenter}>
+            <Text style={s.calVal}>{remaining.calories}</Text>
+            <Text style={s.calLabel}>KCAL REMAINING</Text>
+          </View>
         </View>
 
-        {/* Log a Meal */}
-        <Text style={s.section}>Log a Meal</Text>
-        <TextInput style={s.input} placeholder="Meal name (e.g. Chicken Breast)" placeholderTextColor={COLORS.textMuted} value={mealName} onChangeText={setMealName} />
-        <TextInput style={s.input} placeholder="Calories" placeholderTextColor={COLORS.textMuted} value={mealCalories} onChangeText={setMealCalories} keyboardType="numeric" />
-        <TouchableOpacity style={s.logBtn} onPress={logMeal}>
-          <Text style={s.logBtnText}>Log Meal</Text>
-        </TouchableOpacity>
+        {/* Quick Add Bento */}
+        <Text style={s.sectionTitle}>QUICK FUEL INJECTION</Text>
+        <View style={s.bentoGrid}>
+          {QUICK_ADD_PRESETS.map((item, i) => (
+            <TouchableOpacity key={i} style={s.bentoItem} onPress={() => logMeal(item.name, item.calories, item.protein, item.carbs, item.fats)}>
+              <Text style={s.bentoEmoji}>{item.emoji}</Text>
+              <Text style={s.bentoName}>{item.name.toUpperCase()}</Text>
+              <Text style={s.bentoSub}>{item.calories} KCAL</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        {/* Multi-purpose Food Suggestions Placeholder */}
-        {guidance.suggestions.length > 0 && (
-          <View style={[s.card, { marginTop: -SPACING.md, paddingTop: SPACING.md }]}>
-            <Text style={[s.cardTitle, { fontSize: FONT.sizes.md, marginBottom: SPACING.sm }]}>Smart Suggestions</Text>
-            {guidance.suggestions.map((food, idx) => (
-              <Text key={idx} style={{ color: COLORS.textSecondary, marginBottom: 4 }}>• {food.name} ({food.protein}g protein)</Text>
-            ))}
+        {/* Manual Entry Glass */}
+        <View style={s.manualCard}>
+          <Text style={s.manualTitle}>MANUAL OVERRIDE</Text>
+          <View style={s.inputRow}>
+            <TextInput style={s.input} placeholder="ENTRY NAME" placeholderTextColor={COLORS.textMuted} value={mealName} onChangeText={setMealName} />
+            <TextInput style={[s.input, { width: 80 }]} placeholder="KCAL" placeholderTextColor={COLORS.textMuted} value={mealCalories} onChangeText={setMealCalories} keyboardType="numeric" />
+            <TouchableOpacity style={s.addBtn} onPress={() => logMeal()}>
+              <Text style={s.addBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* AI Insight Pill */}
+        {guidance.insights.length > 0 && (
+          <View style={s.insightPill}>
+            <Text style={s.insightText}>⚡ {guidance.insights[0].toUpperCase()}</Text>
           </View>
         )}
 
-        {/* Recent Logs */}
-        {todayLog?.meals?.map((m, i) => (
-          <View key={i} style={s.mealRow}>
-            <Text style={s.mealName}>{m.name}</Text>
-            <Text style={s.mealCal}>{m.calories} cal</Text>
+        {/* Recent Fuel Logs */}
+        <Text style={s.sectionTitle}>RECENT TRANSFERS</Text>
+        {todayLog?.meals?.reverse().map((m, i) => (
+          <View key={i} style={s.logItem}>
+            <View>
+              <Text style={s.logName}>{m.name.toUpperCase()}</Text>
+              <Text style={s.logMacros}>{m.protein}P • {m.carbs}C • {m.fats}F</Text>
+            </View>
+            <Text style={s.logCal}>+{m.calories}</Text>
           </View>
         ))}
+
+        <View style={{ height: 100 }} />
       </ScrollView>
+      <BottomNavBar navigation={navigation} activeRoute="DietGuidelines" />
     </SafeAreaView>
+  );
+}
+
+function MacroRing({ label, current, target, color }) {
+  const size = 80;
+  const stroke = 6;
+  const radius = (size - stroke) / 2;
+  const circ = 2 * Math.PI * radius;
+  const progress = Math.min(1, current / target);
+
+  return (
+    <View style={s.ringBox}>
+      <Svg width={size} height={size}>
+        <Circle cx={size/2} cy={size/2} r={radius} stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} fill="none" />
+        <Circle cx={size/2} cy={size/2} r={radius} stroke={color} strokeWidth={stroke} strokeDasharray={circ} strokeDashoffset={circ * (1 - progress)} strokeLinecap="round" fill="none" transform={`rotate(-90 ${size/2} ${size/2})`} />
+      </Svg>
+      <Text style={[s.ringLabel, { color }]}>{label}</Text>
+      <Text style={s.ringVal}>{current}g</Text>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { padding: SPACING.xl },
-  title: { fontSize: FONT.sizes.xxl, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.xxl, marginTop: SPACING.lg },
-  macroRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.xl },
-  macroCard: { flex: 1, backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.lg, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  macroValue: { fontSize: FONT.sizes.xxl, ...FONT.bold, color: COLORS.primary },
-  macroLabel: { fontSize: FONT.sizes.xs, color: COLORS.textSecondary, marginTop: 4 },
-  card: { backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.xl, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.xl },
-  cardTitle: { fontSize: FONT.sizes.lg, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.lg },
-  progressRow: { marginBottom: SPACING.lg },
-  progressLabel: { fontSize: FONT.sizes.sm, color: COLORS.textSecondary, marginBottom: SPACING.xs },
-  barBg: { height: 6, backgroundColor: COLORS.borderLight, borderRadius: RADIUS.round, overflow: 'hidden', marginBottom: SPACING.xs },
-  barFill: { height: '100%', backgroundColor: COLORS.primary },
-  progressVal: { fontSize: FONT.sizes.xs, color: COLORS.textMuted, textAlign: 'right' },
-  section: { fontSize: FONT.sizes.xl, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.lg },
-  input: { backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.lg, color: COLORS.textPrimary, fontSize: FONT.sizes.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
-  logBtn: { backgroundColor: COLORS.primary, padding: SPACING.lg, borderRadius: RADIUS.md, alignItems: 'center', marginBottom: SPACING.xl },
-  logBtnText: { fontSize: FONT.sizes.md, ...FONT.bold, color: COLORS.textOnPrimary },
-  mealRow: { flexDirection: 'row', justifyContent: 'space-between', padding: SPACING.md, backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.border },
-  mealName: { fontSize: FONT.sizes.md, color: COLORS.textPrimary },
-  mealCal: { fontSize: FONT.sizes.md, color: COLORS.primary, ...FONT.bold },
+  scroll: { paddingHorizontal: SPACING.xl },
+  header: { marginTop: SPACING.xxl, marginBottom: SPACING.xl },
+  logo: { fontSize: FONT.sizes.xxxl, color: COLORS.textPrimary, fontWeight: '900', fontStyle: 'italic', letterSpacing: 2 },
+  subText: { fontSize: 10, color: COLORS.primaryContainer, fontWeight: '800', letterSpacing: 3, marginTop: 4 },
+
+  heroCard: { 
+    backgroundColor: COLORS.surface, 
+    borderRadius: RADIUS.xxl, 
+    padding: SPACING.xl, 
+    borderWidth: 1, 
+    borderColor: COLORS.border,
+    marginBottom: SPACING.xxl,
+    alignItems: 'center'
+  },
+  ringsRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginBottom: SPACING.xl },
+  ringBox: { alignItems: 'center' },
+  ringLabel: { fontSize: 8, fontWeight: '900', marginTop: SPACING.sm, letterSpacing: 1 },
+  ringVal: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary },
+  
+  calCenter: { alignItems: 'center' },
+  calVal: { fontSize: 42, fontWeight: '900', color: COLORS.primaryContainer },
+  calLabel: { fontSize: 8, fontWeight: '800', color: COLORS.textMuted, letterSpacing: 2 },
+
+  sectionTitle: { fontSize: 10, fontWeight: '900', color: COLORS.textMuted, letterSpacing: 3, marginBottom: SPACING.lg },
+  bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, marginBottom: SPACING.xxl },
+  bentoItem: { 
+    width: (width - SPACING.xl * 2 - SPACING.md * 2) / 3, 
+    backgroundColor: COLORS.surfaceLight, 
+    padding: SPACING.md, 
+    borderRadius: RADIUS.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  bentoEmoji: { fontSize: 20, marginBottom: 4 },
+  bentoName: { fontSize: 8, fontWeight: '900', color: COLORS.textPrimary, textAlign: 'center' },
+  bentoSub: { fontSize: 8, fontWeight: '700', color: COLORS.primaryContainer, marginTop: 2 },
+
+  manualCard: { 
+    backgroundColor: COLORS.surface, 
+    borderRadius: RADIUS.xxl, 
+    padding: SPACING.lg, 
+    borderWidth: 1, 
+    borderColor: COLORS.border,
+    marginBottom: SPACING.xl 
+  },
+  manualTitle: { fontSize: 8, fontWeight: '900', color: COLORS.textMuted, letterSpacing: 2, marginBottom: SPACING.md },
+  inputRow: { flexDirection: 'row', gap: SPACING.sm },
+  input: { flex: 1, backgroundColor: COLORS.surfaceElevated, borderRadius: RADIUS.md, padding: SPACING.md, color: COLORS.textPrimary, fontSize: 12, fontWeight: '700' },
+  addBtn: { backgroundColor: COLORS.primaryContainer, width: 44, height: 44, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
+  addBtnText: { color: COLORS.background, fontSize: 24, fontWeight: '900' },
+
+  insightPill: { 
+    backgroundColor: 'rgba(202, 253, 0, 0.1)', 
+    padding: SPACING.md, 
+    borderRadius: RADIUS.round, 
+    borderWidth: 1, 
+    borderColor: COLORS.primaryContainer,
+    marginBottom: SPACING.xxl 
+  },
+  insightText: { fontSize: 10, fontWeight: '900', color: COLORS.primaryContainer, textAlign: 'center', letterSpacing: 1 },
+
+  logItem: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    backgroundColor: COLORS.surfaceLight, 
+    padding: SPACING.lg, 
+    borderRadius: RADIUS.xl, 
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)'
+  },
+  logName: { fontSize: 12, fontWeight: '900', color: COLORS.textPrimary },
+  logMacros: { fontSize: 8, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },
+  logCal: { fontSize: 14, fontWeight: '900', color: COLORS.primaryContainer },
 });

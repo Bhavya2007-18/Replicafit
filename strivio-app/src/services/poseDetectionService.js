@@ -2,6 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import * as poseDetection from '@tensorflow-models/pose-detection';
 import { decodeJpeg } from '@tensorflow/tfjs-react-native';
 import * as FileSystem from 'expo-file-system';
+import { smoothKeypoints } from './smoothingFilter';
 import { Buffer } from 'buffer';
 
 /**
@@ -26,13 +27,9 @@ export const SKELETON_CONNECTIONS = [
   ['right_hip', 'right_knee'], ['right_knee', 'right_ankle'],
 ];
 
-<<<<<<< HEAD
-const MIN_CONFIDENCE = 0.3;
-const VISIBILITY_THRESHOLD = 0.5; // Stricter threshold for "reliable" joints
-=======
 const MIN_CONFIDENCE = 0.35;
+const VISIBILITY_THRESHOLD = 0.5; // Stricter threshold for "reliable" joints
 let detector = null;
->>>>>>> cc81b6556b88f56453f6e064ed624356cd115a94
 let isInitialized = false;
 
 /**
@@ -65,33 +62,9 @@ export const detectPose = async (frameData) => {
   }
 
   try {
-<<<<<<< HEAD
-    // Generate keypoints based on motion analysis
-    // In production, this would use MLKit or MediaPipe native SDK
-    const rawKeypoints = generateKeypointsFromMotion(frameData, motionData);
-
-    // Apply smoothing filter to reduce jitter
-    let keypoints;
-    try {
-      const { smoothKeypoints } = require('./smoothingFilter');
-      keypoints = smoothKeypoints(rawKeypoints);
-    } catch (e) {
-      keypoints = rawKeypoints; // Fallback if filter unavailable
-    }
-    
-    const scores = keypoints.map(kp => kp.score || 0);
-    const avgConfidence = scores.reduce((a, b) => a + b, 0) / scores.length;
-
-    // Use stricter visibility threshold for reliability check
-    const criticalJoints = ['left_shoulder', 'right_shoulder', 'left_hip', 'right_hip', 'left_knee', 'right_knee'];
-    const reliableJoints = criticalJoints.filter(name => {
-      const kp = keypoints.find(k => k.name === name);
-      return kp && kp.score >= VISIBILITY_THRESHOLD;
-=======
     // 1. Convert image to tensor (using Buffer for safer base64 decoding)
     const imgB64 = await FileSystem.readAsStringAsync(frameData.uri, {
       encoding: FileSystem.EncodingType.Base64,
->>>>>>> cc81b6556b88f56453f6e064ed624356cd115a94
     });
     const imgBuffer = Buffer.from(imgB64, 'base64');
     const rawImageData = new Uint8Array(imgBuffer);
@@ -103,17 +76,22 @@ export const detectPose = async (frameData) => {
 
     if (poses && poses.length > 0) {
       const pose = poses[0];
-      const keypoints = pose.keypoints.map(kp => ({
+      const rawKeypoints = pose.keypoints.map(kp => ({
         name: kp.name,
         x: kp.x / frameData.width,
         y: kp.y / frameData.height,
         score: kp.score
       }));
 
+      // Apply smoothing filter to reduce jitter
+      const keypoints = smoothKeypoints(rawKeypoints);
+
       const avgConfidence = pose.score || 0;
-      const criticalJoints = ['left_shoulder', 'right_shoulder', 'left_hip', 'right_hip'];
+      
+      // Use stricter visibility threshold for reliability check
+      const criticalJoints = ['left_shoulder', 'right_shoulder', 'left_hip', 'right_hip', 'left_knee', 'right_knee'];
       const reliableCount = keypoints.filter(kp => 
-        criticalJoints.includes(kp.name) && kp.score >= MIN_CONFIDENCE
+        criticalJoints.includes(kp.name) && kp.score >= VISIBILITY_THRESHOLD
       ).length;
 
       return {

@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { getDailyTargets, getGuidance } from '../services/nutritionGuidanceEngine';
 import api from '../services/api';
+
+const { width } = Dimensions.get('window');
 
 export default function AICoachChatScreen({ navigation }) {
   const { user } = useAuth();
@@ -23,36 +25,28 @@ export default function AICoachChatScreen({ navigation }) {
       const progress = await api.getProgress();
 
       const initialMessages = [
-        { from: 'ai', text: `Hey ${user?.name?.split(' ')[0] || 'Athlete'}! I'm your AI coach. Here's what I've noticed:`, time: 'now' },
+        { from: 'ai', text: `GREETINGS, ${user?.name?.toUpperCase()?.split(' ')[0] || 'OPERATIVE'}. CORE INTELLIGENCE SYNCHRONIZED.`, time: 'now' },
       ];
 
       if (Array.isArray(insights) && insights.length > 0) {
         insights.forEach(i => {
-          initialMessages.push({ from: 'ai', text: i.message, time: 'now', type: i.type });
+          initialMessages.push({ from: 'ai', text: i.message.toUpperCase(), time: 'now', type: i.type });
         });
       }
 
       if (progress) {
         if (progress.streak > 0) {
-          initialMessages.push({ from: 'ai', text: `🔥 You're on a ${progress.streak}-day streak! Don't break it.`, time: 'now' });
+          initialMessages.push({ from: 'ai', text: `🔥 UPLINK ACTIVE: ${progress.streak}-DAY STREAK DETECTED. DO NOT BREAK THE SEQUENCE.`, time: 'now' });
         }
-        if (progress.totalWorkouts > 0) {
-          initialMessages.push({ from: 'ai', text: `📊 Overall stats: ${progress.totalWorkouts} workouts, ${progress.avgAccuracy}% avg accuracy, Level ${progress.level}.`, time: 'now' });
-        }
-      }
-
-      if (initialMessages.length === 1) {
-        initialMessages.push({ from: 'ai', text: 'Complete some workouts and I\'ll start giving you personalized coaching insights!', time: 'now' });
       }
 
       setMessages(initialMessages);
     } catch (e) {
       setMessages([
-        { from: 'ai', text: 'Hey! I\'m your AI fitness coach. Ask me anything about your training!', time: 'now' },
+        { from: 'ai', text: 'CORE INTELLIGENCE READY. AWAITING QUERY.', time: 'now' },
       ]);
     }
 
-    // Load nutrition context
     try {
       const logs = await api.getNutritionLogs();
       const todayLog = logs.find(l => new Date(l.date).toDateString() === new Date().toDateString());
@@ -72,62 +66,45 @@ export default function AICoachChatScreen({ navigation }) {
 
   const generateResponse = (userMessage) => {
     const msg = userMessage.toLowerCase();
-
     if (msg.includes('plan') || msg.includes('workout')) {
-      return 'Go to the Workout Plans screen to generate a personalized plan based on your fitness goal and activity level. I\'ll adapt it automatically as you progress!';
+      return 'ACCESS THE MOVEMENT VAULT TO GENERATE OPTIMIZED TRAINING PROTOCOLS BASED ON YOUR BIOMETRIC PROFILE.';
     }
-    if (msg.includes('form') || msg.includes('accuracy') || msg.includes('technique')) {
-      return 'Start a Guided Workout — the AI camera will analyze your form in real-time and give you instant corrections. Focus on keeping knees aligned and back straight.';
-    }
-    if (msg.includes('diet') || msg.includes('nutrition') || msg.includes('eat') || msg.includes('food') || msg.includes('protein') || msg.includes('carb') || msg.includes('calorie')) {
+    if (msg.includes('diet') || msg.includes('nutrition') || msg.includes('eat')) {
       if (nutritionContext) {
         const r = nutritionContext.remaining;
-        const insight = nutritionContext.insights[0] || '';
-        const suggestion = nutritionContext.suggestions.length > 0 ? `Try: ${nutritionContext.suggestions.map(s => s.name).join(', ')}.` : '';
-        return `${insight} You have ${r.calories} cal and ${r.protein}g protein remaining today. ${suggestion}`;
+        return `FUEL MARGIN: ${r.calories} KCAL | ${r.protein}G PROTEIN REMAINING. OPTIMIZE MACRO INTAKE FOR MAXIMUM ANABOLIC OUTPUT.`;
       }
-      return 'Head to the Nutrition Tracker to log meals and track your macros. Based on your goal, I\'d recommend focusing on protein intake — aim for at least 1.6g per kg of body weight.';
+      return 'LOG YOUR FUEL INTAKE IN THE NUTRITION MODULE FOR PRECISE MACRONUTRIENT ANALYSIS.';
     }
-    if (msg.includes('rest') || msg.includes('recovery') || msg.includes('tired') || msg.includes('sore')) {
-      return 'Recovery is crucial! Take a rest day if you\'re feeling fatigued. Try light stretching, stay hydrated, and aim for 7-8 hours of sleep. Your muscles grow during rest, not during workouts.';
-    }
-    if (msg.includes('goal') || msg.includes('progress')) {
-      return 'Check your Progress Dashboard for detailed analytics. Set specific goals in the Goal Tracking screen — having clear targets increases success rate by 42%!';
-    }
-    if (msg.includes('challenge') || msg.includes('community')) {
-      return 'Join a community challenge! Competing with others increases workout consistency by 34%. Check the Community tab for active challenges.';
-    }
-    if (msg.includes('streak')) {
-      return 'Streaks are powerful motivators! Even a 10-minute workout counts toward maintaining your streak. Consistency beats intensity every time.';
-    }
-
-    return 'Great question! I analyze your workout data to give personalized advice. Try asking about form correction, workout plans, nutrition, recovery, or your progress.';
+    return 'QUERY PROCESSED. I AM ANALYZING YOUR PERFORMANCE METRICS TO OPTIMIZE YOUR EVOLUTION.';
   };
 
   const sendMessage = () => {
     if (!input.trim()) return;
-
-    const userMsg = { from: 'user', text: input.trim(), time: 'now' };
+    const userMsg = { from: 'user', text: input.trim().toUpperCase(), time: 'now' };
     const aiResponse = { from: 'ai', text: generateResponse(input.trim()), time: 'now' };
-
     setMessages(prev => [...prev, userMsg, aiResponse]);
     setInput('');
-
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   return (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={s.back}>← Back</Text></TouchableOpacity>
-        <View>
-          <Text style={s.headerTitle}>AI Coach</Text>
-          <Text style={s.headerStatus}>● Online</Text>
+        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={s.backText}>‹ EXIT COACH</Text>
+        </TouchableOpacity>
+        <View style={s.coachInfo}>
+          <Text style={s.logo}>REPLICAFIT AI</Text>
+          <View style={s.statusRow}>
+            <View style={s.statusDot} />
+            <Text style={s.statusText}>SYNCHRONIZED</Text>
+          </View>
         </View>
       </View>
 
       <ScrollView ref={scrollRef} style={s.chatArea} contentContainerStyle={s.chatContent}>
-        {loading && <Text style={s.loadingText}>Loading insights...</Text>}
+        {loading && <Text style={s.loadingText}>SYNCHRONIZING CORE...</Text>}
         {messages.map((msg, i) => (
           <View key={i} style={[s.bubble, msg.from === 'user' ? s.bubbleUser : s.bubbleAI]}>
             <Text style={[s.bubbleText, msg.from === 'user' && s.bubbleTextUser]}>{msg.text}</Text>
@@ -136,10 +113,10 @@ export default function AICoachChatScreen({ navigation }) {
       </ScrollView>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={s.inputRow}>
+        <View style={s.inputArea}>
           <TextInput
             style={s.input}
-            placeholder="Ask your AI coach..."
+            placeholder="TRANSMIT QUERY..."
             placeholderTextColor={COLORS.textMuted}
             value={input}
             onChangeText={setInput}
@@ -147,7 +124,7 @@ export default function AICoachChatScreen({ navigation }) {
             returnKeyType="send"
           />
           <TouchableOpacity style={s.sendBtn} onPress={sendMessage}>
-            <Text style={s.sendText}>→</Text>
+            <Text style={s.sendIcon}>TRANS</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -157,20 +134,76 @@ export default function AICoachChatScreen({ navigation }) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', alignItems: 'center', padding: SPACING.xl, gap: SPACING.lg, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  back: { color: COLORS.primary, fontSize: FONT.sizes.md },
-  headerTitle: { fontSize: FONT.sizes.xl, ...FONT.bold, color: COLORS.textPrimary },
-  headerStatus: { fontSize: FONT.sizes.xs, color: COLORS.success },
+  header: { 
+    paddingHorizontal: SPACING.xl, 
+    paddingVertical: SPACING.lg, 
+    borderBottomWidth: 1, 
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  backText: { fontSize: 10, fontWeight: '900', color: COLORS.textMuted, letterSpacing: 1 },
+  coachInfo: { alignItems: 'flex-end' },
+  logo: { fontSize: 14, fontWeight: '900', color: COLORS.primaryContainer, fontStyle: 'italic', letterSpacing: 1 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primaryContainer, marginRight: 6 },
+  statusText: { fontSize: 8, fontWeight: '900', color: COLORS.primaryContainer, letterSpacing: 1 },
+
   chatArea: { flex: 1 },
-  chatContent: { padding: SPACING.xl },
-  loadingText: { color: COLORS.textMuted, textAlign: 'center', marginBottom: SPACING.lg },
-  bubble: { maxWidth: '85%', padding: SPACING.md, borderRadius: RADIUS.md, marginBottom: SPACING.md },
-  bubbleAI: { backgroundColor: COLORS.surfaceLight, alignSelf: 'flex-start', borderWidth: 1, borderColor: COLORS.border },
-  bubbleUser: { backgroundColor: COLORS.primary, alignSelf: 'flex-end' },
-  bubbleText: { fontSize: FONT.sizes.md, color: COLORS.textPrimary, lineHeight: 22 },
-  bubbleTextUser: { color: COLORS.textOnPrimary },
-  inputRow: { flexDirection: 'row', padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border, gap: SPACING.sm },
-  input: { flex: 1, backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.md, color: COLORS.textPrimary, fontSize: FONT.sizes.md, borderWidth: 1, borderColor: COLORS.border },
-  sendBtn: { backgroundColor: COLORS.primary, width: 48, height: 48, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
-  sendText: { fontSize: 22, color: COLORS.textOnPrimary, ...FONT.bold },
+  chatContent: { padding: SPACING.xl, paddingBottom: 100 },
+  loadingText: { color: COLORS.textMuted, textAlign: 'center', fontSize: 10, fontWeight: '800', letterSpacing: 2 },
+  
+  bubble: { 
+    maxWidth: '85%', 
+    padding: SPACING.lg, 
+    borderRadius: RADIUS.xl, 
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+  },
+  bubbleAI: { 
+    backgroundColor: 'rgba(255, 255, 255, 0.03)', 
+    alignSelf: 'flex-start', 
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomLeftRadius: 0
+  },
+  bubbleUser: { 
+    backgroundColor: COLORS.surfaceElevated, 
+    alignSelf: 'flex-end', 
+    borderColor: COLORS.primaryContainer,
+    borderBottomRightRadius: 0
+  },
+  bubbleText: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '700', lineHeight: 20 },
+  bubbleTextUser: { color: COLORS.textPrimary },
+  
+  inputArea: { 
+    flexDirection: 'row', 
+    padding: SPACING.lg, 
+    backgroundColor: COLORS.surface, 
+    borderTopWidth: 1, 
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    gap: SPACING.md
+  },
+  input: { 
+    flex: 1, 
+    backgroundColor: COLORS.surfaceElevated, 
+    borderRadius: RADIUS.round, 
+    paddingHorizontal: SPACING.xl, 
+    paddingVertical: 12, 
+    color: COLORS.textPrimary, 
+    fontSize: 12, 
+    fontWeight: '700',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
+  },
+  sendBtn: { 
+    backgroundColor: COLORS.primaryContainer, 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    borderRadius: RADIUS.round, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  sendIcon: { fontSize: 10, fontWeight: '900', color: COLORS.background, letterSpacing: 1 },
 });

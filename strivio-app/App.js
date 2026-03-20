@@ -30,7 +30,8 @@ function AppNavigator() {
   if (loading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#d4af35" />
+        <ActivityIndicator size="large" color="#cafd00" />
+        <Text style={{ color: '#aaa', marginTop: 10, fontSize: 10, fontWeight: '800', letterSpacing: 2 }}>INITIALIZING REPLICAFIT...</Text>
       </View>
     );
   }
@@ -82,8 +83,8 @@ function App() {
   if (!isTfReady) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#d4af35" />
-        <Text style={{ color: '#aaa', marginTop: 10 }}>Initializing AI Engine...</Text>
+        <ActivityIndicator size="large" color="#cafd00" />
+        <Text style={{ color: '#aaa', marginTop: 10, fontSize: 10, fontWeight: '800', letterSpacing: 2 }}>INITIALIZING REPLICAFIT AI...</Text>
       </View>
     );
   }

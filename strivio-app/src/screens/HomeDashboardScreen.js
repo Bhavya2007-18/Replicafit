@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { Pedometer } from 'expo-sensors';
+import Svg, { Circle, G } from 'react-native-svg';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { getDailyTargets, getGuidance } from '../services/nutritionGuidanceEngine';
 import BottomNavBar from '../components/BottomNavBar';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+
+const { width } = Dimensions.get('window');
+const RING_SIZE = width * 0.7;
+const STROKE_WIDTH = 12;
 
 export default function HomeDashboardScreen({ navigation }) {
   const { user } = useAuth();
@@ -30,11 +35,9 @@ export default function HomeDashboardScreen({ navigation }) {
     }).catch(console.log);
   }, []);
 
-  const displayName = user?.name?.split(' ')[0] || user?.profile?.name || 'Athlete';
-  const streak = progress?.streak || 0;
-  const totalWorkouts = progress?.totalWorkouts || 0;
-  const avgAccuracy = progress?.avgAccuracy || 0;
-
+  const displayName = user?.name?.split(' ')[0] || user?.profile?.name || 'ATHLETE';
+  
+  // Targets & Guidance
   const targets = getDailyTargets(user?.profile || {});
   const guidance = getGuidance(targets, {
     totalCalories: nutritionLog?.totalCalories || 0,
@@ -42,85 +45,177 @@ export default function HomeDashboardScreen({ navigation }) {
     totalCarbs: nutritionLog?.totalCarbs || 0,
     totalFat: nutritionLog?.totalFats || 0
   });
-  const topInsight = guidance.insights[0];
+  const topInsight = guidance.insights[0] || "REPLYING TO YOUR RECENT INPUT...";
+
+  // Ring Percentages
+  const stepTarget = 10000;
+  const calTarget = targets.calories || 2500;
+  const distTarget = 8; // km
+
+  const stepPerc = Math.min(stepCount / stepTarget, 1);
+  const calPerc = Math.min((nutritionLog?.totalCalories || 0) / calTarget, 1);
+  const distPerc = Math.min((stepCount * 0.0008) / distTarget, 1);
+
+  const renderRing = (perc, radius, color, index) => {
+    const circum = 2 * Math.PI * radius;
+    const offset = circum - perc * circum;
+    return (
+      <Circle
+        key={index}
+        cx={RING_SIZE / 2}
+        cy={RING_SIZE / 2}
+        r={radius}
+        stroke={color}
+        strokeWidth={STROKE_WIDTH}
+        strokeDasharray={circum}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        fill="transparent"
+        transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={s.container}>
-      <ScrollView contentContainerStyle={s.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        
+        {/* Branding Header */}
         <View style={s.header}>
-          <Text style={s.logo}>Replicafit</Text>
-          <Text style={s.greeting}>Hi, {displayName}</Text>
-          <Text style={s.sub}>{topInsight || 'Your fitness summary for today'}</Text>
+          <Text style={s.logo}>REPLICAFIT</Text>
+          <View style={s.greetingRow}>
+            <Text style={s.greetingText}>MORNING, {displayName.toUpperCase()}</Text>
+            <View style={s.statusDot} />
+          </View>
+          <Text style={s.subText}>Ready for Explosive growth?</Text>
         </View>
 
-        {/* Daily Activity */}
-        <View style={s.activityCard}>
-          <Text style={s.activityLabel}>Daily Activity</Text>
-          <View style={s.activityRow}>
-            <View style={s.statBox}><Text style={s.statValue}>{stepCount}</Text><Text style={s.statLabel}>Steps</Text></View>
-            <View style={s.statBox}><Text style={s.statValue}>{Math.floor(stepCount * 0.04)}</Text><Text style={s.statLabel}>Calories</Text></View>
-            <View style={s.statBox}><Text style={s.statValue}>{(stepCount * 0.0008).toFixed(1)}</Text><Text style={s.statLabel}>km</Text></View>
+        {/* Concentric Rings Visual */}
+        <View style={s.ringsContainer}>
+          <Svg width={RING_SIZE} height={RING_SIZE}>
+            {/* Background Circles */}
+            <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_SIZE / 2 - 20} stroke={COLORS.surfaceElevated} strokeWidth={STROKE_WIDTH} fill="transparent" />
+            <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_SIZE / 2 - 45} stroke={COLORS.surfaceElevated} strokeWidth={STROKE_WIDTH} fill="transparent" />
+            <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_SIZE / 2 - 70} stroke={COLORS.surfaceElevated} strokeWidth={STROKE_WIDTH} fill="transparent" />
+            
+            {/* Active Rings */}
+            {renderRing(distPerc, RING_SIZE / 2 - 20, COLORS.primary, 0)}
+            {renderRing(stepPerc, RING_SIZE / 2 - 45, COLORS.secondary, 1)}
+            {renderRing(calPerc, RING_SIZE / 2 - 70, COLORS.primaryContainer, 2)}
+          </Svg>
+          
+          <View style={s.ringsOverlay}>
+            <Text style={s.overlayVal}>{stepCount}</Text>
+            <Text style={s.overlayLabel}>STEPS</Text>
           </View>
         </View>
 
-        {/* Stats Row */}
-        <View style={s.statsRow}>
-          <View style={s.miniStat}><Text style={s.miniVal}>{streak}🔥</Text><Text style={s.miniLabel}>Streak</Text></View>
-          <View style={s.miniStat}><Text style={s.miniVal}>{totalWorkouts}</Text><Text style={s.miniLabel}>Workouts</Text></View>
-          <View style={s.miniStat}><Text style={s.miniVal}>{avgAccuracy}%</Text><Text style={s.miniLabel}>Accuracy</Text></View>
-        </View>
-
-        {/* Quick Actions */}
-        <Text style={s.sectionTitle}>Quick Actions</Text>
-        <TouchableOpacity style={s.primaryBtn} onPress={() => navigation.navigate('GuidedWorkout')}>
-          <Text style={s.primaryBtnText}>Start Guided Workout</Text>
+        {/* AI Coach Spotlight (Glassmorphism inspired) */}
+        <TouchableOpacity style={s.aiSpotlight} onPress={() => navigation.navigate('AICoachChat')}>
+          <View style={s.aiHeader}>
+            <Text style={s.aiTitle}>AI COACH SPOTLIGHT</Text>
+            <Text style={s.aiLive}>LIVE</Text>
+          </View>
+          <Text style={s.aiInsight}>{topInsight.toUpperCase()}</Text>
+          <View style={s.aiFooter}>
+            <Text style={s.aiAction}>ASK FOR ADJUSTMENT →</Text>
+          </View>
         </TouchableOpacity>
 
-        <View style={s.gridRow}>
-          <TouchableOpacity style={s.gridCard} onPress={() => navigation.navigate('WorkoutPlans')}><Text style={s.gridIcon}>💪</Text><Text style={s.gridLabel}>Plans</Text></TouchableOpacity>
-          <TouchableOpacity style={s.gridCard} onPress={() => navigation.navigate('ExerciseLibrary')}><Text style={s.gridIcon}>📖</Text><Text style={s.gridLabel}>Exercises</Text></TouchableOpacity>
+        {/* Training Hub - Bento Grid */}
+        <Text style={s.sectionTitle}>TRAINING HUB</Text>
+        <View style={s.grid}>
+          <HubCard icon="💪" label="PLANS" sub="Curated" onPress={() => navigation.navigate('WorkoutPlans')} />
+          <HubCard icon="📖" label="LIBRARY" sub="Movements" onPress={() => navigation.navigate('ExerciseLibrary')} />
+          <HubCard icon="🥗" label="FUEL" sub="Macros" onPress={() => navigation.navigate('DietGuidelines')} />
+          <HubCard icon="🎯" label="GOALS" sub="Target" onPress={() => navigation.navigate('GoalTracking')} />
+          <HubCard icon="📈" label="METRICS" sub="Analytics" onPress={() => navigation.navigate('ProgressDashboard')} />
+          <HubCard icon="🏆" label="ELITE" sub="Badges" onPress={() => navigation.navigate('Achievements')} />
         </View>
-        <View style={s.gridRow}>
-          <TouchableOpacity style={s.gridCard} onPress={() => navigation.navigate('GoalTracking')}><Text style={s.gridIcon}>🎯</Text><Text style={s.gridLabel}>Goals</Text></TouchableOpacity>
-          <TouchableOpacity style={s.gridCard} onPress={() => navigation.navigate('DietGuidelines')}><Text style={s.gridIcon}>🥗</Text><Text style={s.gridLabel}>Nutrition</Text></TouchableOpacity>
-        </View>
-        <View style={s.gridRow}>
-          <TouchableOpacity style={s.gridCard} onPress={() => navigation.navigate('ProgressDashboard')}><Text style={s.gridIcon}>📈</Text><Text style={s.gridLabel}>Progress</Text></TouchableOpacity>
-          <TouchableOpacity style={s.gridCard} onPress={() => navigation.navigate('AICoachChat')}><Text style={s.gridIcon}>🤖</Text><Text style={s.gridLabel}>AI Coach</Text></TouchableOpacity>
-        </View>
-        <View style={s.gridRow}>
-          <TouchableOpacity style={s.gridCard} onPress={() => navigation.navigate('Achievements')}><Text style={s.gridIcon}>🏆</Text><Text style={s.gridLabel}>Achievements</Text></TouchableOpacity>
-          <TouchableOpacity style={s.gridCard} onPress={() => navigation.navigate('Community')}><Text style={s.gridIcon}>👥</Text><Text style={s.gridLabel}>Community</Text></TouchableOpacity>
-        </View>
-        <View style={{ height: 20 }} />
+
+        {/* Start Session CTA */}
+        <TouchableOpacity style={s.startBtn} onPress={() => navigation.navigate('GuidedWorkout')}>
+          <Text style={s.startBtnText}>START EXPLOSIVE SESSION</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
       <BottomNavBar navigation={navigation} activeRoute="HomeDashboard" />
     </SafeAreaView>
   );
 }
 
+function HubCard({ icon, label, sub, onPress }) {
+  return (
+    <TouchableOpacity style={s.card} onPress={onPress}>
+      <Text style={s.cardIcon}>{icon}</Text>
+      <View>
+        <Text style={s.cardLabel}>{label}</Text>
+        <Text style={s.cardSub}>{sub}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { paddingHorizontal: SPACING.xl },
-  header: { paddingTop: SPACING.xxl, marginBottom: SPACING.xl },
-  logo: { fontSize: FONT.sizes.xxxl, ...FONT.bold, color: COLORS.primary, marginBottom: SPACING.xs },
-  greeting: { fontSize: FONT.sizes.xxl, ...FONT.bold, color: COLORS.textPrimary },
-  sub: { fontSize: FONT.sizes.md, color: COLORS.textSecondary, marginTop: SPACING.xs },
-  activityCard: { backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.xl, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.lg },
-  activityLabel: { fontSize: FONT.sizes.sm, color: COLORS.textSecondary, ...FONT.semibold, marginBottom: SPACING.md, textTransform: 'uppercase', letterSpacing: 1 },
-  activityRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  statBox: { alignItems: 'center' },
-  statValue: { fontSize: FONT.sizes.xxl, ...FONT.bold, color: COLORS.primary },
-  statLabel: { fontSize: FONT.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
-  statsRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.xl },
-  miniStat: { flex: 1, backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  miniVal: { fontSize: FONT.sizes.lg, ...FONT.bold, color: COLORS.primary },
-  miniLabel: { fontSize: FONT.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
-  sectionTitle: { fontSize: FONT.sizes.xl, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.lg },
-  primaryBtn: { backgroundColor: COLORS.primary, padding: SPACING.lg, borderRadius: RADIUS.md, alignItems: 'center', marginBottom: SPACING.xl },
-  primaryBtnText: { fontSize: FONT.sizes.lg, ...FONT.bold, color: COLORS.textOnPrimary },
-  gridRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
-  gridCard: { flex: 1, backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, padding: SPACING.xl, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  gridIcon: { fontSize: 28, marginBottom: SPACING.sm },
-  gridLabel: { fontSize: FONT.sizes.sm, ...FONT.semibold, color: COLORS.textPrimary },
+  header: { marginTop: SPACING.xxl, marginBottom: SPACING.xl },
+  logo: { fontSize: FONT.sizes.xxxl, color: COLORS.primaryContainer, letterSpacing: 4, fontStyle: 'italic', fontWeight: '900' },
+  greetingRow: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.md },
+  greetingText: { fontSize: FONT.sizes.xl, color: COLORS.textPrimary, fontWeight: '700' },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primaryContainer, marginLeft: SPACING.sm },
+  subText: { fontSize: FONT.sizes.md, color: COLORS.textMuted, marginTop: 4 },
+  
+  ringsContainer: { alignItems: 'center', justifyContent: 'center', marginVertical: SPACING.xxl },
+  ringsOverlay: { position: 'absolute', alignItems: 'center' },
+  overlayVal: { fontSize: FONT.sizes.hero, color: COLORS.textPrimary, fontWeight: '900' },
+  overlayLabel: { fontSize: FONT.sizes.sm, color: COLORS.textMuted, letterSpacing: 2 },
+
+  aiSpotlight: { 
+    backgroundColor: 'rgba(26, 26, 26, 0.8)', 
+    borderRadius: RADIUS.xxl, 
+    padding: SPACING.xl, 
+    borderWidth: 1, 
+    borderColor: COLORS.primaryContainer,
+    marginBottom: SPACING.xxl,
+    overflow: 'hidden'
+  },
+  aiHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.md },
+  aiTitle: { fontSize: FONT.sizes.sm, color: COLORS.textMuted, fontWeight: '700', letterSpacing: 1 },
+  aiLive: { fontSize: 10, color: COLORS.primaryContainer, fontWeight: '900', borderWidth: 1, borderColor: COLORS.primaryContainer, paddingHorizontal: 4, borderRadius: 4 },
+  aiInsight: { fontSize: FONT.sizes.lg, color: COLORS.textPrimary, fontWeight: '600', lineHeight: 24 },
+  aiFooter: { marginTop: SPACING.lg, alignItems: 'flex-end' },
+  aiAction: { fontSize: FONT.sizes.xs, color: COLORS.primaryContainer, fontWeight: '700' },
+
+  sectionTitle: { fontSize: FONT.sizes.md, color: COLORS.textMuted, fontWeight: '800', letterSpacing: 2, marginBottom: SPACING.lg },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, justifyContent: 'space-between' },
+  card: { 
+    width: (width - SPACING.xl * 2 - SPACING.md) / 2, 
+    backgroundColor: COLORS.surface, 
+    borderRadius: RADIUS.xxl, 
+    padding: SPACING.lg, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  cardIcon: { fontSize: 24 },
+  cardLabel: { fontSize: FONT.sizes.sm, color: COLORS.textPrimary, fontWeight: '700' },
+  cardSub: { fontSize: 10, color: COLORS.textMuted },
+
+  startBtn: { 
+    backgroundColor: COLORS.primaryContainer, 
+    marginTop: SPACING.xxl, 
+    padding: SPACING.xl, 
+    borderRadius: RADIUS.round, 
+    alignItems: 'center',
+    shadowColor: COLORS.primaryContainer,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10
+  },
+  startBtnText: { color: COLORS.onPrimary, fontWeight: '900', fontSize: FONT.sizes.md, letterSpacing: 1 },
 });
