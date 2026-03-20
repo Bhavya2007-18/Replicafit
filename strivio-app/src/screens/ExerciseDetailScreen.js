@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Modal, Image, Linking } from 'react-native';
+import { Platform } from 'expo-modules-core';
 import { WebView } from 'react-native-webview';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { exerciseDatabase as exercises } from '../data/exerciseDatabase';
@@ -13,6 +14,16 @@ export default function ExerciseDetailScreen({ route, navigation }) {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [expandedPhase, setExpandedPhase] = useState(null);
   const [expandedMistake, setExpandedMistake] = useState(null);
+
+  const handleVideoPress = () => {
+    if (Platform.OS === 'web') {
+      // Open YouTube in new browser tab for web
+      Linking.openURL(ex.tutorialUrl);
+    } else {
+      // Show modal for mobile platforms
+      setShowVideoModal(true);
+    }
+  };
 
   if (!ex) return (
     <SafeAreaView style={s.container}>
@@ -117,12 +128,15 @@ export default function ExerciseDetailScreen({ route, navigation }) {
         {/* Video Tutorial Section */}
         <Text style={s.sectionHeader}>VIDEO TUTORIAL</Text>
         {ex.tutorialUrl ? (
-          <TouchableOpacity style={s.videoCard} onPress={() => setShowVideoModal(true)}>
+          <TouchableOpacity style={s.videoCard} onPress={() => handleVideoPress()}>
             <View style={s.videoPreview}>
               {ex.videoPreviewUrl ? (
                 <View style={s.thumbnailPlaceholder}>
-                  <Text style={s.playIcon}>▶</Text>
-                  <Text style={s.videoText}>WATCH TUTORIAL</Text>
+                  <Image source={{ uri: ex.videoPreviewUrl }} style={s.thumbnailImage} resizeMode="cover" />
+                  <View style={s.playButtonOverlay}>
+                    <Text style={s.playIcon}>▶</Text>
+                    <Text style={s.videoText}>WATCH TUTORIAL</Text>
+                  </View>
                 </View>
               ) : (
                 <View style={s.thumbnailPlaceholder}>
@@ -154,31 +168,33 @@ export default function ExerciseDetailScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Video Modal */}
-      <Modal
-        visible={showVideoModal}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={() => setShowVideoModal(false)}
-      >
-        <View style={s.modalContainer}>
-          <View style={s.modalHeader}>
-            <TouchableOpacity style={s.closeBtn} onPress={() => setShowVideoModal(false)}>
-              <Text style={s.closeText}>✕ CLOSE</Text>
-            </TouchableOpacity>
+      {/* Video Modal - Only show on mobile platforms */}
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={showVideoModal}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          onRequestClose={() => setShowVideoModal(false)}
+        >
+          <View style={s.modalContainer}>
+            <View style={s.modalHeader}>
+              <TouchableOpacity style={s.closeBtn} onPress={() => setShowVideoModal(false)}>
+                <Text style={s.closeText}>✕ CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+            {ex.tutorialUrl && (
+              <WebView
+                source={{ uri: ex.tutorialUrl }}
+                style={s.webView}
+                allowsInlineMediaPlayback={true}
+                mediaPlaybackRequiresUserAction={false}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+              />
+            )}
           </View>
-          {ex.tutorialUrl && (
-            <WebView
-              source={{ uri: ex.tutorialUrl }}
-              style={s.webView}
-              allowsInlineMediaPlayback={true}
-              mediaPlaybackRequiresUserAction={false}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
-            />
-          )}
-        </View>
-      </Modal>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -289,6 +305,20 @@ const s = StyleSheet.create({
   thumbnailPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: RADIUS.lg,
+  },
+  playButtonOverlay: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
   },
   playIcon: {
     fontSize: 32,

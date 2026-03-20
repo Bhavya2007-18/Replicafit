@@ -33,7 +33,9 @@ export const exerciseDatabase = [
       { text: 'Sagging the hips.', image: 'https://tse1.mm.bing.net/th?q=pushup+mistake+sagging+hips+lower+back' },
       { text: 'Flaring elbows out too wide.', image: 'https://tse1.mm.bing.net/th?q=pushup+mistake+flared+elbows' },
       { text: 'Not going down far enough.', image: 'https://tse1.mm.bing.net/th?q=pushup+mistake+half+rep+shallow' }
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=IODxDxX7oi4',
+    videoPreviewUrl: 'https://img.youtube.com/vi/IODxDxX7oi4/0.jpg'
   },
   {
     id: 'lunges',
@@ -50,7 +52,9 @@ export const exerciseDatabase = [
       { text: 'Letting the front knee go past the toes heavily.', image: 'https://tse1.mm.bing.net/th?q=lunge+mistake+knee+over+toes' },
       { text: 'Leaning the torso too far forward.', image: 'https://tse1.mm.bing.net/th?q=lunge+mistake+leaning+forward' },
       { text: 'Taking a step that is too short.', image: 'https://tse1.mm.bing.net/th?q=lunge+mistake+short+step+cramped' }
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=L8fvypPrzis',
+    videoPreviewUrl: 'https://img.youtube.com/vi/L8fvypPrzis/0.jpg'
   },
   {
     id: 'pullups',
@@ -67,7 +71,9 @@ export const exerciseDatabase = [
       { text: 'Using momentum (kipping) instead of muscle strength.', image: 'https://tse1.mm.bing.net/th?q=pullup+mistake+kipping+swinging' },
       { text: 'Not completing a full range of motion.', image: 'https://tse1.mm.bing.net/th?q=pullup+mistake+half+rep' },
       { text: 'Letting the shoulders shrug up to the ears.', image: 'https://tse1.mm.bing.net/th?q=pullup+mistake+shrugged+shoulders' }
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
+    videoPreviewUrl: 'https://img.youtube.com/vi/eGo4IYlbE5g/0.jpg'
   },
   {
     id: 'plank',
@@ -84,7 +90,9 @@ export const exerciseDatabase = [
       { text: 'Raising the hips too high (forming a tent).', image: 'https://tse1.mm.bing.net/th?q=plank+mistake+hips+too+high+tent' },
       { text: 'Letting the hips sag toward the ground.', image: 'https://tse1.mm.bing.net/th?q=plank+mistake+sagging+hips' },
       { text: 'Looking up and straining the neck.', image: 'https://tse1.mm.bing.net/th?q=plank+mistake+looking+up+neck+strain' }
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=ASdvN_XEl_c',
+    videoPreviewUrl: 'https://img.youtube.com/vi/ASdvN_XEl_c/0.jpg'
   },
   {
     id: 'jumping_jacks',
@@ -100,7 +108,9 @@ export const exerciseDatabase = [
     commonMistakes: [
       { text: 'Not raising arms fully overhead.', image: 'https://tse1.mm.bing.net/th?q=jumping+jack+mistake+arms+too+low' },
       { text: 'Landing heavily on your feet.', image: 'https://tse1.mm.bing.net/th?q=jumping+jack+mistake+heavy+landing' }
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=lmA3V2mVZlU',
+    videoPreviewUrl: 'https://img.youtube.com/vi/lmA3V2mVZlU/0.jpg'
   },
   {
     id: 'legraises',
@@ -117,7 +127,9 @@ export const exerciseDatabase = [
       { text: 'Arching the lower back off the floor.', image: 'https://tse1.mm.bing.net/th?q=leg+raises+mistake+arched+back' },
       { text: 'Using momentum instead of controlled motion.', image: 'https://tse1.mm.bing.net/th?q=leg+raises+mistake+momentum+swinging' },
       { text: 'Bending the knees excessively.', image: 'https://tse1.mm.bing.net/th?q=leg+raises+mistake+bent+knees' }
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=5lVjgVg-b0Q',
+    videoPreviewUrl: 'https://img.youtube.com/vi/5lVjgVg-b0Q/0.jpg'
   },
   {
     id: 'bicep_curls',
