@@ -19,6 +19,7 @@ class JumpingJack(BaseExercise):
         self.legs_out = False
         self._jump_count = 0
         self._was_arms_down = True
+        self._prev_arm_angle = 0.0
 
     def get_primary_angle(self, landmarks, frame_width, frame_height):
         elbow_l = get_landmark_coords(
@@ -33,7 +34,24 @@ class JumpingJack(BaseExercise):
         return calculate_angle(wrist_l, elbow_l, shoulder_l)
 
     def get_stage(self, angle, previous_angle):
-        return "arms_down"
+        if self.current_stage == "arms_up":
+            if angle > 60:
+                return "arms_down"
+            elif angle > 50:
+                return "middle"
+            return "arms_up"
+        elif self.current_stage == "arms_down":
+            if angle <= 45:
+                return "arms_up"
+            elif angle < 55:
+                return "middle"
+            return "arms_down"
+        else:
+            if angle > 55:
+                return "arms_down"
+            elif angle <= 45:
+                return "arms_up"
+            return "middle"
 
     def get_leg_spread(self, landmarks, frame_width, frame_height):
         left_ankle = get_landmark_coords(
@@ -117,12 +135,14 @@ class JumpingJack(BaseExercise):
             }
 
         arm_angle = self.get_primary_angle(landmarks, frame_width, frame_height)
+        smoothed_arm_angle = self._smooth_angle(arm_angle)
+        self._prev_arm_angle = smoothed_arm_angle
         accuracy = self.calculate_accuracy(landmarks, frame_width, frame_height)
         feedback_level, feedback_text = self.get_form_feedback(
             landmarks, frame_width, frame_height
         )
 
-        is_arms_up = arm_angle < 45
+        is_arms_up = smoothed_arm_angle < 45
         leg_spread = self.get_leg_spread(landmarks, frame_width, frame_height)
         is_legs_out = leg_spread > 100
 
@@ -136,7 +156,7 @@ class JumpingJack(BaseExercise):
                 start_time=self.rep_start_time or 0,
                 end_time=0,
                 accuracy=accuracy,
-                angles={"arm": arm_angle, "leg_spread": leg_spread},
+                angles={"arm": smoothed_arm_angle, "leg_spread": leg_spread},
                 feedback=feedback_text,
             )
             self.reps_data.append(rep_data)
@@ -146,13 +166,13 @@ class JumpingJack(BaseExercise):
             self._was_arms_down = True
 
         self.current_stage = "arms_up" if is_arms_up else "arms_down"
-        self.last_angle = arm_angle
+        self.last_angle = smoothed_arm_angle
 
         return {
             "visible": True,
             "rep_count": self.rep_count,
             "stage": self.current_stage,
-            "angle": arm_angle,
+            "angle": smoothed_arm_angle,
             "accuracy": accuracy,
             "feedback": feedback_level,
             "feedback_text": feedback_text,
