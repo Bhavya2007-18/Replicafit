@@ -21,6 +21,7 @@ import AICoachChatScreen from './src/screens/AICoachChatScreen';
 import AchievementsScreen from './src/screens/AchievementsScreen';
 import CommunityScreen from './src/screens/CommunityScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import FatigueMonitorScreen from './src/screens/FatigueMonitorScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -56,6 +57,7 @@ function AppNavigator() {
           <Stack.Screen name="Achievements" component={AchievementsScreen} />
           <Stack.Screen name="Community" component={CommunityScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="FatigueMonitor" component={FatigueMonitorScreen} />
         </>
       )}
     </Stack.Navigator>
