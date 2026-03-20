@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { exerciseDatabase as exercises } from '../data/exerciseDatabase';
 
@@ -8,6 +9,8 @@ const { width } = Dimensions.get('window');
 export default function ExerciseDetailScreen({ route, navigation }) {
   const { exerciseId } = route.params;
   const ex = exercises.find(e => e.id === exerciseId);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  
   if (!ex) return null;
 
   return (
@@ -63,6 +66,30 @@ export default function ExerciseDetailScreen({ route, navigation }) {
           </View>
         ))}
 
+        {/* Video Tutorial Section */}
+        <Text style={s.sectionHeader}>VIDEO TUTORIAL</Text>
+        {ex.tutorialUrl ? (
+          <TouchableOpacity style={s.videoCard} onPress={() => setShowVideoModal(true)}>
+            <View style={s.videoPreview}>
+              {ex.videoPreviewUrl ? (
+                <View style={s.thumbnailPlaceholder}>
+                  <Text style={s.playIcon}>▶</Text>
+                  <Text style={s.videoText}>WATCH TUTORIAL</Text>
+                </View>
+              ) : (
+                <View style={s.thumbnailPlaceholder}>
+                  <Text style={s.playIcon}>▶</Text>
+                  <Text style={s.videoText}>WATCH TUTORIAL</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={s.noVideoCard}>
+            <Text style={s.noVideoText}>No tutorial available</Text>
+          </View>
+        )}
+
         <View style={{ height: 120 }} />
       </ScrollView>
 
@@ -72,6 +99,32 @@ export default function ExerciseDetailScreen({ route, navigation }) {
           <Text style={s.startBtnText}>INITIALIZE AI TRAINING</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Video Modal */}
+      <Modal
+        visible={showVideoModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowVideoModal(false)}
+      >
+        <View style={s.modalContainer}>
+          <View style={s.modalHeader}>
+            <TouchableOpacity style={s.closeBtn} onPress={() => setShowVideoModal(false)}>
+              <Text style={s.closeText}>✕ CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+          {ex.tutorialUrl && (
+            <WebView
+              source={{ uri: ex.tutorialUrl }}
+              style={s.webView}
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={false}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+            />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -145,4 +198,75 @@ const s = StyleSheet.create({
     shadowRadius: 20
   },
   startBtnText: { fontSize: 14, fontWeight: '900', color: COLORS.background, letterSpacing: 1 },
+
+  // Video Tutorial Styles
+  videoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    marginBottom: SPACING.lg,
+    borderWidth: 2,
+    borderColor: COLORS.primaryContainer,
+  },
+  videoPreview: {
+    height: 180,
+    backgroundColor: 'rgba(202, 253, 0, 0.05)',
+    borderRadius: RADIUS.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbnailPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playIcon: {
+    fontSize: 32,
+    color: COLORS.primaryContainer,
+    marginBottom: SPACING.sm,
+  },
+  videoText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.primaryContainer,
+    letterSpacing: 1,
+  },
+  noVideoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  noVideoText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  modalHeader: {
+    padding: SPACING.lg,
+    backgroundColor: 'rgba(14, 14, 14, 0.9)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  closeBtn: {
+    alignSelf: 'flex-end',
+  },
+  closeText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+  },
+  webView: {
+    flex: 1,
+  },
 });

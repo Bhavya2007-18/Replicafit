@@ -14,7 +14,9 @@ export const exerciseDatabase = [
       'Knees caving inwards.',
       'Rounding the lower back.',
       'Lifting heels off the ground.'
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=aclHkVaku9U',
+    videoPreviewUrl: 'https://img.youtube.com/vi/aclHkVaku9U/0.jpg'
   },
   {
     id: 'pushups',
@@ -31,7 +33,9 @@ export const exerciseDatabase = [
       'Sagging the hips.',
       'Flaring elbows out too wide.',
       'Not going down far enough.'
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=IODxDxX7oi4',
+    videoPreviewUrl: 'https://img.youtube.com/vi/IODxDxX7oi4/0.jpg'
   },
   {
     id: 'lunges',
@@ -48,7 +52,9 @@ export const exerciseDatabase = [
       'Letting the front knee go past the toes heavily.',
       'Leaning the torso too far forward.',
       'Taking a step that is too short.'
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=L8fvypPrzzs',
+    videoPreviewUrl: 'https://img.youtube.com/vi/L8fvypPrzzs/0.jpg'
   },
   {
     id: 'pullups',
@@ -65,7 +71,9 @@ export const exerciseDatabase = [
       'Using momentum (kipping) instead of muscle strength.',
       'Not completing a full range of motion.',
       'Letting the shoulders shrug up to the ears.'
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
+    videoPreviewUrl: 'https://img.youtube.com/vi/eGo4IYlbE5g/0.jpg'
   },
   {
     id: 'plank',
@@ -82,7 +90,9 @@ export const exerciseDatabase = [
       'Raising the hips too high (forming a tent).',
       'Letting the hips sag toward the ground.',
       'Looking up and straining the neck.'
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=ASdvN_XEl_c',
+    videoPreviewUrl: 'https://img.youtube.com/vi/ASdvN_XEl_c/0.jpg'
   },
   {
     id: 'legraises',
@@ -99,6 +109,8 @@ export const exerciseDatabase = [
       'Arching the lower back off the floor.',
       'Using momentum instead of controlled motion.',
       'Bending the knees excessively.'
-    ]
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=2MEwQgzTIZc',
+    videoPreviewUrl: 'https://img.youtube.com/vi/2MEwQgzTIZc/0.jpg'
   }
 ];
