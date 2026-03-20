@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { getDailyTargets, getGuidance } from '../services/nutritionGuidanceEngine';
 import api from '../services/api';
 
 export default function AICoachChatScreen({ navigation }) {
@@ -9,6 +10,7 @@ export default function AICoachChatScreen({ navigation }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [nutritionContext, setNutritionContext] = useState(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -49,6 +51,22 @@ export default function AICoachChatScreen({ navigation }) {
         { from: 'ai', text: 'Hey! I\'m your AI fitness coach. Ask me anything about your training!', time: 'now' },
       ]);
     }
+
+    // Load nutrition context
+    try {
+      const logs = await api.getNutritionLogs();
+      const todayLog = logs.find(l => new Date(l.date).toDateString() === new Date().toDateString());
+      const profile = user?.profile || {};
+      const targets = getDailyTargets(profile);
+      const guidance = getGuidance(targets, {
+        totalCalories: todayLog?.totalCalories || 0,
+        totalProtein: todayLog?.totalProtein || 0,
+        totalCarbs: todayLog?.totalCarbs || 0,
+        totalFat: todayLog?.totalFats || 0,
+      });
+      setNutritionContext(guidance);
+    } catch(e) {}
+
     setLoading(false);
   };
 
@@ -61,7 +79,13 @@ export default function AICoachChatScreen({ navigation }) {
     if (msg.includes('form') || msg.includes('accuracy') || msg.includes('technique')) {
       return 'Start a Guided Workout — the AI camera will analyze your form in real-time and give you instant corrections. Focus on keeping knees aligned and back straight.';
     }
-    if (msg.includes('diet') || msg.includes('nutrition') || msg.includes('eat') || msg.includes('food')) {
+    if (msg.includes('diet') || msg.includes('nutrition') || msg.includes('eat') || msg.includes('food') || msg.includes('protein') || msg.includes('carb') || msg.includes('calorie')) {
+      if (nutritionContext) {
+        const r = nutritionContext.remaining;
+        const insight = nutritionContext.insights[0] || '';
+        const suggestion = nutritionContext.suggestions.length > 0 ? `Try: ${nutritionContext.suggestions.map(s => s.name).join(', ')}.` : '';
+        return `${insight} You have ${r.calories} cal and ${r.protein}g protein remaining today. ${suggestion}`;
+      }
       return 'Head to the Nutrition Tracker to log meals and track your macros. Based on your goal, I\'d recommend focusing on protein intake — aim for at least 1.6g per kg of body weight.';
     }
     if (msg.includes('rest') || msg.includes('recovery') || msg.includes('tired') || msg.includes('sore')) {

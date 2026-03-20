@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Switch } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import SkeletonOverlay from '../components/SkeletonOverlay';
 import { initializePoseDetection, detectPose, disposePoseDetection } from '../services/poseDetectionService';
 import { classifyExercise, resetClassifier, getExerciseDisplayName } from '../services/exerciseClassifier';
-import { analyzeForm, detectRep, getSessionSummary, resetFormAnalyzer } from '../services/formAnalyzer';
+import { analyzeForm, detectRep, getSessionSummary, resetFormAnalyzer, computeFormScore } from '../services/formAnalyzer';
 import { detectInjuryRisks } from '../services/injuryDetection';
+import { recordRep, analyzeFatigue, resetFatigueTracker } from '../services/fatigueDetection';
+import { markRepStart, markRepEnd, recordAnglesForROM, calculateSymmetry, getTempoROMSummary, resetTempoROM } from '../services/tempoROMTracker';
+import { calculateIntensity } from '../services/workoutIntensity';
+import { speakFeedback, announceRep, announceCorrection, announceFatigue, stopSpeech, setVoiceEnabled } from '../services/voiceFeedback';
 import api from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -31,11 +35,16 @@ export default function GuidedWorkoutScreen({ navigation }) {
   const [sessionSaved, setSessionSaved] = useState(false);
   const [summary, setSummary] = useState(null);
   const [injuryWarnings, setInjuryWarnings] = useState([]);
+  const [enablePostureCorrection, setEnablePostureCorrection] = useState(true);
+  const [poseErrors, setPoseErrors] = useState([]);
+  const [fatigueLevel, setFatigueLevel] = useState('low');
+  const [intensityData, setIntensityData] = useState(null);
 
   const cameraRef = useRef(null);
   const timerRef = useRef(null);
   const analysisRef = useRef(null);
   const isActiveRef = useRef(false);
+  const prevRepsRef = useRef(0);
 
   // Initialize pose detection model
   const loadModel = useCallback(async () => {
@@ -72,8 +81,17 @@ export default function GuidedWorkoutScreen({ navigation }) {
     setFeedback('Analyzing your movement...');
     setSessionSaved(false);
     setSummary(null);
+    setPoseErrors([]);
+    setFatigueLevel('low');
+    setIntensityData(null);
+    prevRepsRef.current = 0;
     resetClassifier();
     resetFormAnalyzer();
+    resetFatigueTracker();
+    resetTempoROM();
+    setVoiceEnabled(true);
+    markRepStart();
+    speakFeedback('Workout started. Get into position.', 'high');
 
     // Timer
     timerRef.current = setInterval(() => setTime(t => t + 1), 1000);
@@ -113,6 +131,7 @@ export default function GuidedWorkoutScreen({ navigation }) {
           const formResult = analyzeForm(kps, classification.exercise, isReliable);
           setAccuracy(formResult.accuracy);
           setIsPaused(formResult.isPaused);
+          setPoseErrors(formResult.errors || []);
 
           if (formResult.feedback && formResult.feedback.length > 0) {
             setFeedback(formResult.feedback[0]);
@@ -121,7 +140,36 @@ export default function GuidedWorkoutScreen({ navigation }) {
           // Detect reps
           if (formResult.angles && classification.exercise) {
             const repResult = detectRep(formResult.angles, classification.exercise);
+            
+            // Track new rep events
+            if (repResult.reps > prevRepsRef.current) {
+              const tempo = markRepEnd();
+              recordRep(formResult.accuracy);
+              announceRep(repResult.reps);
+              markRepStart(); // Start timing next rep
+              prevRepsRef.current = repResult.reps;
+              
+              // Periodically check fatigue (every 3 reps)
+              if (repResult.reps % 3 === 0) {
+                const fatigue = analyzeFatigue();
+                setFatigueLevel(fatigue.fatigue_level);
+                if (fatigue.fatigue_level !== 'low') {
+                  announceFatigue(fatigue.fatigue_level);
+                }
+              }
+            }
+            
             setReps(repResult.reps);
+            
+            // Record ROM data
+            if (classification.angles) {
+              recordAnglesForROM(classification.angles);
+            }
+          }
+
+          // Voice feedback for form corrections
+          if (enablePostureCorrection && formResult.errors && formResult.errors.length > 0) {
+            announceCorrection(formResult.errors[0].correction);
           }
 
           // Injury risk detection
@@ -145,7 +193,21 @@ export default function GuidedWorkoutScreen({ navigation }) {
     if (analysisRef.current) clearInterval(analysisRef.current);
 
     const sessionSummary = getSessionSummary();
-    setSummary(sessionSummary);
+    const tempoROM = getTempoROMSummary();
+    const intensity = calculateIntensity(exercise, time, sessionSummary.totalReps || reps);
+    setIntensityData(intensity);
+
+    // Compute weighted form score
+    const formScore = computeFormScore(
+      sessionSummary.avgAccuracy || 0,
+      100, // ROM score (full range assumed if reps completed)
+      tempoROM.avgSymmetry || 100,
+      tempoROM.avgTempo > 0 ? Math.max(0, 100 - Math.abs(tempoROM.avgTempo - 2.5) * 20) : 100
+    );
+
+    setSummary({ ...sessionSummary, ...tempoROM, intensity, formScore });
+    speakFeedback(`Workout complete. ${sessionSummary.totalReps || reps} reps. Form score ${formScore} percent.`, 'high');
+    stopSpeech();
 
     if (sessionSummary.totalReps > 0 || reps > 0) {
       const session = {
@@ -154,11 +216,11 @@ export default function GuidedWorkoutScreen({ navigation }) {
           reps: sessionSummary.totalReps || reps,
           accuracyScore: sessionSummary.avgAccuracy || accuracy,
           timeSpent: time,
-          caloriesBurned: Math.round((sessionSummary.totalReps || reps) * 3.5),
+          caloriesBurned: intensity.calories || Math.round((sessionSummary.totalReps || reps) * 3.5),
         }],
         totalAccuracy: sessionSummary.avgAccuracy || accuracy,
         totalDuration: time,
-        totalCalories: Math.round((sessionSummary.totalReps || reps) * 3.5),
+        totalCalories: intensity.calories || Math.round((sessionSummary.totalReps || reps) * 3.5),
       };
 
       try {
@@ -205,6 +267,17 @@ export default function GuidedWorkoutScreen({ navigation }) {
 
         <Text style={s.title}>Guided Workout</Text>
         {exercise && <Text style={s.exerciseName}>{getExerciseDisplayName(exercise)}</Text>}
+        
+        {/* Posture Correction Toggle */}
+        <View style={s.toggleRow}>
+          <Text style={s.toggleLabel}>Enable Posture Correction</Text>
+          <Switch
+            value={enablePostureCorrection}
+            onValueChange={setEnablePostureCorrection}
+            trackColor={{ false: COLORS.border, true: COLORS.primaryMuted }}
+            thumbColor={enablePostureCorrection ? COLORS.primary : COLORS.textMuted}
+          />
+        </View>
 
         {/* Camera + Skeleton */}
         <View style={s.cameraContainer}>
@@ -214,7 +287,7 @@ export default function GuidedWorkoutScreen({ navigation }) {
             facing={facing}
             onCameraReady={() => setCameraReady(true)}
           />
-          {isActive && keypoints.length > 0 && (
+          {isActive && keypoints.length > 0 && enablePostureCorrection && (
             <SkeletonOverlay
               keypoints={keypoints}
               accuracy={accuracy}
@@ -245,7 +318,17 @@ export default function GuidedWorkoutScreen({ navigation }) {
         {/* Feedback Card */}
         <View style={s.feedbackCard}>
           <Text style={s.feedbackTitle}>AI Feedback</Text>
-          <Text style={[s.feedbackText, isPaused && s.feedbackWarning]}>{feedback}</Text>
+          <Text style={[s.feedbackText, isPaused && s.feedbackWarning]}>{enablePostureCorrection ? feedback : 'Posture tracking disabled'}</Text>
+          
+          {enablePostureCorrection && poseErrors.length > 0 && isActive && (
+            <View style={s.errorContainer}>
+              {poseErrors.map((e, index) => (
+                <View key={index} style={s.errorBadge}>
+                  <Text style={s.errorBadgeText}>• <Text style={{fontWeight: 'bold', textTransform: 'capitalize'}}>{e.joint}</Text>: {e.correction}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Injury Warnings */}
@@ -266,6 +349,11 @@ export default function GuidedWorkoutScreen({ navigation }) {
             <View style={s.summaryRow}><Text style={s.summaryLabel}>Avg Accuracy</Text><Text style={s.summaryValue}>{summary.avgAccuracy}%</Text></View>
             <View style={s.summaryRow}><Text style={s.summaryLabel}>Best Rep</Text><Text style={s.summaryValue}>{summary.bestAccuracy}%</Text></View>
             <View style={s.summaryRow}><Text style={s.summaryLabel}>Duration</Text><Text style={s.summaryValue}>{formatTime(time)}</Text></View>
+            {summary.intensity && <View style={s.summaryRow}><Text style={s.summaryLabel}>Calories</Text><Text style={s.summaryValue}>{summary.intensity.calories} cal</Text></View>}
+            {summary.intensity && <View style={s.summaryRow}><Text style={s.summaryLabel}>Intensity</Text><Text style={s.summaryValue}>{summary.intensity.intensity}</Text></View>}
+            {summary.avgTempo > 0 && <View style={s.summaryRow}><Text style={s.summaryLabel}>Avg Tempo</Text><Text style={s.summaryValue}>{summary.avgTempo}s/rep</Text></View>}
+            {summary.avgSymmetry < 100 && <View style={s.summaryRow}><Text style={s.summaryLabel}>Symmetry</Text><Text style={s.summaryValue}>{summary.avgSymmetry}%</Text></View>}
+            {summary.formScore != null && <View style={s.summaryRow}><Text style={s.summaryLabel}>Form Score</Text><Text style={[s.summaryValue, { color: summary.formScore >= 80 ? COLORS.success : summary.formScore >= 50 ? COLORS.warning : COLORS.danger }]}>{summary.formScore}/100</Text></View>}
           </View>
         )}
 
@@ -293,7 +381,9 @@ const s = StyleSheet.create({
   back: { color: COLORS.primary, fontSize: FONT.sizes.md },
   flipBtn: { color: COLORS.textSecondary, fontSize: FONT.sizes.md },
   title: { fontSize: FONT.sizes.xxl, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.xs },
-  exerciseName: { fontSize: FONT.sizes.lg, ...FONT.semibold, color: COLORS.primary, marginBottom: SPACING.lg },
+  exerciseName: { fontSize: FONT.sizes.lg, ...FONT.semibold, color: COLORS.primary, marginBottom: SPACING.md },
+  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surfaceLight, padding: SPACING.lg, borderRadius: RADIUS.md, marginBottom: SPACING.lg, borderWidth: 1, borderColor: COLORS.border },
+  toggleLabel: { fontSize: FONT.sizes.md, ...FONT.semibold, color: COLORS.textPrimary },
   loadText: { color: COLORS.textSecondary, fontSize: FONT.sizes.md, textAlign: 'center', marginTop: 100 },
 
   // Camera
@@ -326,6 +416,9 @@ const s = StyleSheet.create({
   feedbackTitle: { fontSize: FONT.sizes.lg, ...FONT.bold, color: COLORS.textPrimary, marginBottom: SPACING.sm },
   feedbackText: { fontSize: FONT.sizes.md, color: COLORS.textSecondary },
   feedbackWarning: { color: COLORS.danger },
+  errorContainer: { marginTop: SPACING.md },
+  errorBadge: { backgroundColor: COLORS.dangerMuted, padding: SPACING.sm, borderRadius: RADIUS.sm, marginBottom: SPACING.xs },
+  errorBadgeText: { color: COLORS.danger, fontSize: FONT.sizes.sm },
 
   // Injury
   injuryCard: { backgroundColor: COLORS.dangerMuted, borderRadius: RADIUS.md, padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.danger, marginBottom: SPACING.xl },

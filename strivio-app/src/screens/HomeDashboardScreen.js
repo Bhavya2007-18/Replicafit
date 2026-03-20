@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { Pedometer } from 'expo-sensors';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
+import { getDailyTargets, getGuidance } from '../services/nutritionGuidanceEngine';
 import BottomNavBar from '../components/BottomNavBar';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -10,6 +11,7 @@ export default function HomeDashboardScreen({ navigation }) {
   const { user } = useAuth();
   const [stepCount, setStepCount] = useState(0);
   const [progress, setProgress] = useState(null);
+  const [nutritionLog, setNutritionLog] = useState(null);
 
   useEffect(() => {
     let sub;
@@ -22,6 +24,10 @@ export default function HomeDashboardScreen({ navigation }) {
 
   useEffect(() => {
     api.getProgress().then(setProgress).catch(console.log);
+    api.getNutritionLogs().then(logs => {
+      const today = logs.find(l => new Date(l.date).toDateString() === new Date().toDateString());
+      setNutritionLog(today);
+    }).catch(console.log);
   }, []);
 
   const displayName = user?.name?.split(' ')[0] || user?.profile?.name || 'Athlete';
@@ -29,13 +35,22 @@ export default function HomeDashboardScreen({ navigation }) {
   const totalWorkouts = progress?.totalWorkouts || 0;
   const avgAccuracy = progress?.avgAccuracy || 0;
 
+  const targets = getDailyTargets(user?.profile || {});
+  const guidance = getGuidance(targets, {
+    totalCalories: nutritionLog?.totalCalories || 0,
+    totalProtein: nutritionLog?.totalProtein || 0,
+    totalCarbs: nutritionLog?.totalCarbs || 0,
+    totalFat: nutritionLog?.totalFats || 0
+  });
+  const topInsight = guidance.insights[0];
+
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.scroll}>
         <View style={s.header}>
           <Text style={s.logo}>Replicafit</Text>
           <Text style={s.greeting}>Hi, {displayName}</Text>
-          <Text style={s.sub}>Your fitness summary for today</Text>
+          <Text style={s.sub}>{topInsight || 'Your fitness summary for today'}</Text>
         </View>
 
         {/* Daily Activity */}

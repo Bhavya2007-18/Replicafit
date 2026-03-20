@@ -44,6 +44,7 @@ export default function ProgressDashboardScreen({ navigation }) {
           <View style={s.statCard}><Text style={s.statValue}>{p.avgAccuracy || 0}%</Text><Text style={s.statLabel}>Avg Accuracy</Text></View>
           <View style={s.statCard}><Text style={s.statValue}>{p.xp || 0}</Text><Text style={s.statLabel}>Total XP</Text></View>
           <View style={s.statCard}><Text style={s.statValue}>{Math.round((p.totalDuration || 0) / 60)}m</Text><Text style={s.statLabel}>Total Time</Text></View>
+          <View style={s.statCard}><Text style={s.statValue}>{p.totalCalories || 0}</Text><Text style={s.statLabel}>Cal Burned</Text></View>
         </View>
       </ScrollView>
       <BottomNavBar navigation={navigation} activeRoute="ProgressDashboard" />

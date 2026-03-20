@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { calculateMacros } from '../services/nutritionEngine';
+import { getDailyTargets, getRemainingMacros, getGuidance } from '../services/nutritionGuidanceEngine';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -12,7 +13,7 @@ export default function DietGuidelinesScreen({ navigation }) {
   const [mealCalories, setMealCalories] = useState('');
 
   const profile = user?.profile || {};
-  const macros = calculateMacros({ weight: profile.weight, height: profile.height, age: profile.age, goal: profile.goal });
+  const targets = getDailyTargets(profile);
 
   useEffect(() => {
     api.getNutritionLogs().then(data => {
@@ -23,15 +24,31 @@ export default function DietGuidelinesScreen({ navigation }) {
   const todayLog = logs.find(l => new Date(l.date).toDateString() === new Date().toDateString());
   const todayCalories = todayLog?.totalCalories || 0;
   const todayProtein = todayLog?.totalProtein || 0;
+  const todayCarbs = todayLog?.totalCarbs || 0;
+  const todayFats = todayLog?.totalFats || 0;
+
+  const guidance = getGuidance(targets, { 
+    totalCalories: todayCalories, 
+    totalProtein: todayProtein,
+    totalCarbs: todayCarbs,
+    totalFat: todayFats
+  });
+
+  const remaining = guidance.remaining;
 
   const logMeal = async () => {
     if (!mealName || !mealCalories) return;
     const cal = parseInt(mealCalories) || 0;
-    const protein = Math.round(cal * 0.12);
+    const proteinTarget = Math.round(cal * 0.15); // Standard assumption for general logging
+    const carbsTarget = Math.round(cal * 0.12);
+    const fatTarget = Math.round(cal * 0.05);
+
     await api.logNutrition({
-      meals: [{ name: mealName, calories: cal, protein, carbs: Math.round(cal * 0.12), fats: Math.round(cal * 0.03) }],
+      meals: [{ name: mealName, calories: cal, protein: proteinTarget, carbs: carbsTarget, fats: fatTarget }],
       totalCalories: todayCalories + cal,
-      totalProtein: todayProtein + protein,
+      totalProtein: todayProtein + proteinTarget,
+      totalCarbs: todayCarbs + carbsTarget,
+      totalFats: todayFats + fatTarget,
     });
     setMealName('');
     setMealCalories('');
@@ -45,15 +62,15 @@ export default function DietGuidelinesScreen({ navigation }) {
         <Text style={s.title}>Nutrition Tracker</Text>
 
         <View style={s.macroRow}>
-          <View style={s.macroCard}><Text style={s.macroValue}>{macros.calories}</Text><Text style={s.macroLabel}>Cal Target</Text></View>
-          <View style={s.macroCard}><Text style={s.macroValue}>{macros.protein}g</Text><Text style={s.macroLabel}>Protein</Text></View>
-          <View style={s.macroCard}><Text style={s.macroValue}>{macros.water}L</Text><Text style={s.macroLabel}>Water</Text></View>
+          <View style={s.macroCard}><Text style={s.macroValue}>{remaining.calories}</Text><Text style={s.macroLabel}>Cal Left</Text></View>
+          <View style={s.macroCard}><Text style={s.macroValue}>{remaining.protein}g</Text><Text style={s.macroLabel}>Prot Left</Text></View>
+          <View style={s.macroCard}><Text style={s.macroValue}>{targets.protein}g</Text><Text style={s.macroLabel}>Prot Goal</Text></View>
         </View>
 
         <View style={s.card}>
-          <Text style={s.cardTitle}>Today's Intake</Text>
-          <View style={s.progressRow}><Text style={s.progressLabel}>Calories</Text><View style={s.barBg}><View style={[s.barFill, { width: `${Math.min(100, (todayCalories / macros.calories) * 100)}%` }]} /></View><Text style={s.progressVal}>{todayCalories} / {macros.calories}</Text></View>
-          <View style={s.progressRow}><Text style={s.progressLabel}>Protein</Text><View style={s.barBg}><View style={[s.barFill, { width: `${Math.min(100, (todayProtein / macros.protein) * 100)}%` }]} /></View><Text style={s.progressVal}>{todayProtein} / {macros.protein}g</Text></View>
+          <Text style={s.cardTitle}>Guidance: {guidance.insights[0]}</Text>
+          <View style={s.progressRow}><Text style={s.progressLabel}>Daily Calories</Text><View style={s.barBg}><View style={[s.barFill, { width: `${Math.min(100, (todayCalories / targets.calories) * 100)}%` }]} /></View><Text style={s.progressVal}>{todayCalories} / {targets.calories} cal</Text></View>
+          <View style={s.progressRow}><Text style={s.progressLabel}>Daily Protein</Text><View style={s.barBg}><View style={[s.barFill, { width: `${Math.min(100, (todayProtein / targets.protein) * 100)}%`, backgroundColor: COLORS.success }]} /></View><Text style={s.progressVal}>{todayProtein} / {targets.protein}g</Text></View>
         </View>
 
         {/* Log a Meal */}
@@ -63,6 +80,16 @@ export default function DietGuidelinesScreen({ navigation }) {
         <TouchableOpacity style={s.logBtn} onPress={logMeal}>
           <Text style={s.logBtnText}>Log Meal</Text>
         </TouchableOpacity>
+
+        {/* Multi-purpose Food Suggestions Placeholder */}
+        {guidance.suggestions.length > 0 && (
+          <View style={[s.card, { marginTop: -SPACING.md, paddingTop: SPACING.md }]}>
+            <Text style={[s.cardTitle, { fontSize: FONT.sizes.md, marginBottom: SPACING.sm }]}>Smart Suggestions</Text>
+            {guidance.suggestions.map((food, idx) => (
+              <Text key={idx} style={{ color: COLORS.textSecondary, marginBottom: 4 }}>• {food.name} ({food.protein}g protein)</Text>
+            ))}
+          </View>
+        )}
 
         {/* Recent Logs */}
         {todayLog?.meals?.map((m, i) => (

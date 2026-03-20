@@ -23,6 +23,8 @@ const nutritionLogSchema = new mongoose.Schema({
   }],
   totalCalories: { type: Number, default: 0 },
   totalProtein: { type: Number, default: 0 },
+  totalCarbs: { type: Number, default: 0 },
+  totalFats: { type: Number, default: 0 },
   waterIntake: { type: Number, default: 0 }, // liters
 });
 

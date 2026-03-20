@@ -1,0 +1,10 @@
+{
+  "name": "strivio-root",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npm start --prefix strivio-app",
+    "android": "npm run android --prefix strivio-app",
+    "ios": "npm run ios --prefix strivio-app",
+    "web": "npm run web --prefix strivio-app"
+  }
+}

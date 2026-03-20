@@ -4,6 +4,8 @@
  * Confidence-gated: skips analysis when landmarks are unreliable.
  */
 import { calculateAngle, findKeypoint } from './poseDetectionService';
+import { detectPostureErrors } from './postureEngine';
+import { smoothAngles } from './smoothingFilter';
 
 // Per-rep accuracy history
 let repAccuracies = [];
@@ -81,14 +83,11 @@ const analyzeSquatForm = (keypoints) => {
     scores.kneeAlignment * ideal.kneeAlignment.weight
   );
 
-  // Generate feedback based on weakest area
-  const feedback = [];
-  if (scores.backAngle < 60) feedback.push('Straighten your back');
-  if (scores.kneeAngle < 50) feedback.push('Lower your hips further');
-  if (scores.kneeAlignment < 50) feedback.push('Keep knees aligned with toes');
-  if (kneeAngle > 140) feedback.push('Go deeper into the squat');
+  const anglesObj = { kneeAngle, hipAngle, backAngle, kneeAlignment };
+  const errors = detectPostureErrors('squats', anglesObj);
+  const feedback = errors.map(e => e.correction);
 
-  return { accuracy: totalAccuracy, scores, feedback, angles: { kneeAngle, hipAngle, backAngle } };
+  return { accuracy: totalAccuracy, scores, feedback, errors, angles: anglesObj };
 };
 
 /**
@@ -122,12 +121,11 @@ const analyzePushupForm = (keypoints) => {
     scores.symmetry * ideal.symmetry.weight
   );
 
-  const feedback = [];
-  if (scores.hipAngle < 60) feedback.push('Keep your body in a straight line');
-  if (scores.elbowAngle < 50) feedback.push('Lower your chest more');
-  if (scores.symmetry < 50) feedback.push('Keep shoulders level');
+  const anglesObj = { elbowAngle, hipAngle, shoulderAngle, symmetry };
+  const errors = detectPostureErrors('pushups', anglesObj);
+  const feedback = errors.map(e => e.correction);
 
-  return { accuracy: totalAccuracy, scores, feedback, angles: { elbowAngle, hipAngle } };
+  return { accuracy: totalAccuracy, scores, feedback, errors, angles: anglesObj };
 };
 
 /**
@@ -155,11 +153,11 @@ const analyzeLungeForm = (keypoints) => {
     scoreAngle(balance, ideal.balance) * ideal.balance.weight
   );
 
-  const feedback = [];
-  if (frontKnee > 110) feedback.push('Bend front knee deeper');
-  if (torsoUpright > 20) feedback.push('Keep torso upright');
+  const anglesObj = { frontKnee, backKnee, torsoUpright, balance };
+  const errors = detectPostureErrors('lunges', anglesObj);
+  const feedback = errors.map(e => e.correction);
 
-  return { accuracy: totalAccuracy, scores: {}, feedback, angles: { frontKnee, backKnee } };
+  return { accuracy: totalAccuracy, scores: {}, feedback, errors, angles: anglesObj };
 };
 
 /**
@@ -172,6 +170,7 @@ export const analyzeForm = (keypoints, exercise, isReliable) => {
     return {
       accuracy: 0,
       feedback: ['Please step fully into the camera frame.'],
+      errors: [],
       isPaused: true,
       scores: {},
     };
@@ -189,16 +188,18 @@ export const analyzeForm = (keypoints, exercise, isReliable) => {
     case 'lunges':
       result = analyzeLungeForm(keypoints);
       break;
-    case 'planks':
+    case 'planks': {
       // Planks: score is just hold stability
-      result = { accuracy: 85, feedback: ['Hold steady'], scores: {}, angles: {} };
+      const plankErrors = detectPostureErrors('planks', { hipAngle: keypoints[11]?.y || 180 });
+      result = { accuracy: 85, feedback: plankErrors.length ? plankErrors.map(e=>e.correction) : ['Hold steady'], errors: plankErrors, scores: {}, angles: {} };
       break;
+    }
     default:
-      return { accuracy: 0, feedback: ['Detecting exercise...'], isPaused: false, scores: {} };
+      return { accuracy: 0, feedback: ['Detecting exercise...'], errors: [], isPaused: false, scores: {} };
   }
 
   if (!result) {
-    return { accuracy: 0, feedback: ['Position all joints in frame'], isPaused: true, scores: {} };
+    return { accuracy: 0, feedback: ['Position all joints in frame'], errors: [], isPaused: true, scores: {} };
   }
 
   lastRepAccuracy = result.accuracy;
@@ -206,48 +207,52 @@ export const analyzeForm = (keypoints, exercise, isReliable) => {
 };
 
 /**
- * Rep detection using state machine per exercise
+ * Rep detection using a robust 3-state machine with debounce
+ * States: IDLE → DESCENDING → ASCENDING → (rep counted) → IDLE
  */
-let repState = { phase: 'idle', reps: 0 };
+const DEBOUNCE_MS = 400; // Minimum time between reps to prevent double-counting
+const REP_THRESHOLDS = {
+  squats:   { downEnter: 120, upExit: 150 },
+  pushups:  { downEnter: 110, upExit: 150 },
+  lunges:   { downEnter: 120, upExit: 150 },
+};
 
-export const detectRep = (angles, exercise) => {
-  if (!angles) return repState;
+let repState = { phase: 'IDLE', reps: 0, lastRepTime: 0, repStartTime: 0 };
 
-  const kneeAngle = angles.kneeAngle || angles.leftKnee || 180;
-  const elbowAngle = angles.elbowAngle || angles.leftElbow || 180;
+export const detectRep = (rawAngles, exercise) => {
+  if (!rawAngles) return repState;
 
-  switch (exercise) {
-    case 'squats': {
-      if (kneeAngle > 155 && repState.phase === 'down') {
-        repState.reps++;
-        repAccuracies.push(lastRepAccuracy);
-        repState.phase = 'up';
-      } else if (kneeAngle < 110) {
-        repState.phase = 'down';
+  // Apply angle smoothing for stability
+  const angles = smoothAngles(rawAngles);
+
+  const thresholds = REP_THRESHOLDS[exercise];
+  if (!thresholds) return repState;
+
+  const primaryAngle = exercise === 'pushups'
+    ? (angles.elbowAngle || angles.leftElbow || 180)
+    : (angles.kneeAngle || angles.frontKnee || angles.leftKnee || 180);
+
+  const now = Date.now();
+
+  switch (repState.phase) {
+    case 'IDLE':
+      if (primaryAngle < thresholds.downEnter) {
+        repState.phase = 'DESCENDING';
+        repState.repStartTime = now;
       }
       break;
-    }
-    case 'pushups': {
-      if (elbowAngle > 155 && repState.phase === 'down') {
-        repState.reps++;
-        repAccuracies.push(lastRepAccuracy);
-        repState.phase = 'up';
-      } else if (elbowAngle < 100) {
-        repState.phase = 'down';
+
+    case 'DESCENDING':
+      if (primaryAngle > thresholds.upExit) {
+        // Debounce: only count if enough time has passed since last rep
+        if ((now - repState.lastRepTime) > DEBOUNCE_MS) {
+          repState.reps++;
+          repState.lastRepTime = now;
+          repAccuracies.push(lastRepAccuracy);
+        }
+        repState.phase = 'IDLE';
       }
       break;
-    }
-    case 'lunges': {
-      const frontKnee = angles.frontKnee || kneeAngle;
-      if (frontKnee > 155 && repState.phase === 'down') {
-        repState.reps++;
-        repAccuracies.push(lastRepAccuracy);
-        repState.phase = 'up';
-      } else if (frontKnee < 110) {
-        repState.phase = 'down';
-      }
-      break;
-    }
   }
 
   return repState;
@@ -271,7 +276,29 @@ export const getSessionSummary = () => {
  * Reset all form analysis state
  */
 export const resetFormAnalyzer = () => {
-  repState = { phase: 'idle', reps: 0 };
+  repState = { phase: 'IDLE', reps: 0, lastRepTime: 0, repStartTime: 0 };
   repAccuracies = [];
   lastRepAccuracy = 0;
+  try {
+    const { resetSmoothingBuffers } = require('./smoothingFilter');
+    resetSmoothingBuffers();
+  } catch(e) {}
+};
+
+/**
+ * Compute a weighted overall form score (0-100)
+ * Combines posture, ROM, symmetry, and tempo into one number
+ * @param {number} postureScore - from analyzeForm accuracy (0-100)
+ * @param {number} romScore - from tempoROMTracker (0-100, based on full range)
+ * @param {number} symmetryScore - from tempoROMTracker (0-100)
+ * @param {number} tempoScore - based on rep consistency (0-100)
+ * @returns {number} weighted form score 0-100
+ */
+export const computeFormScore = (postureScore = 0, romScore = 100, symmetryScore = 100, tempoScore = 100) => {
+  return Math.round(
+    postureScore * 0.4 +
+    romScore * 0.3 +
+    symmetryScore * 0.2 +
+    tempoScore * 0.1
+  );
 };

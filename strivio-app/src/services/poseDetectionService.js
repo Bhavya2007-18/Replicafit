@@ -32,6 +32,7 @@ export const SKELETON_CONNECTIONS = [
 ];
 
 const MIN_CONFIDENCE = 0.3;
+const VISIBILITY_THRESHOLD = 0.5; // Stricter threshold for "reliable" joints
 let isInitialized = false;
 let frameCount = 0;
 
@@ -62,15 +63,25 @@ export const detectPose = async (frameData, motionData = null) => {
   try {
     // Generate keypoints based on motion analysis
     // In production, this would use MLKit or MediaPipe native SDK
-    const keypoints = generateKeypointsFromMotion(frameData, motionData);
+    const rawKeypoints = generateKeypointsFromMotion(frameData, motionData);
+
+    // Apply smoothing filter to reduce jitter
+    let keypoints;
+    try {
+      const { smoothKeypoints } = require('./smoothingFilter');
+      keypoints = smoothKeypoints(rawKeypoints);
+    } catch (e) {
+      keypoints = rawKeypoints; // Fallback if filter unavailable
+    }
     
     const scores = keypoints.map(kp => kp.score || 0);
     const avgConfidence = scores.reduce((a, b) => a + b, 0) / scores.length;
 
+    // Use stricter visibility threshold for reliability check
     const criticalJoints = ['left_shoulder', 'right_shoulder', 'left_hip', 'right_hip', 'left_knee', 'right_knee'];
     const reliableJoints = criticalJoints.filter(name => {
       const kp = keypoints.find(k => k.name === name);
-      return kp && kp.score >= MIN_CONFIDENCE;
+      return kp && kp.score >= VISIBILITY_THRESHOLD;
     });
 
     const isReliable = reliableJoints.length >= 4 && avgConfidence >= MIN_CONFIDENCE;
