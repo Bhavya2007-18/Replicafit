@@ -39,6 +39,10 @@ const IDEAL_FORMS = {
     shoulderAngle: { min: 80, max: 100, weight: 0.3, label: 'Arm position' },
     spineAngle: { min: 170, max: 185, weight: 0.3, label: 'Spine straight' },
   },
+  bicep_curls: {
+    elbowAngle: { min: 30, max: 150, weight: 0.6, label: 'Full extension/flexion' },
+    shoulderAngle: { min: 0, max: 30, weight: 0.4, label: 'Upper arm stability' }
+  },
 };
 
 /**
@@ -188,6 +192,38 @@ const analyzeJumpingJacksForm = (keypoints) => {
 };
 
 /**
+ * Analyze form for bicep curls
+ */
+const analyzeBicepCurlsForm = (keypoints) => {
+  // Only accept keypoints with reasonable confidence
+  const find = (n) => { const k = findKeypoint(keypoints, n); return k && k.score > 0.3 ? k : null; };
+  const lShoulder = find('left_shoulder'), rShoulder = find('right_shoulder');
+  const lElbow = find('left_elbow'), rElbow = find('right_elbow');
+  const lWrist = find('left_wrist'), rWrist = find('right_wrist');
+  const lHip = find('left_hip'), rHip = find('right_hip');
+
+  if (!lShoulder || !lElbow || !lWrist) return null;
+
+  const elbowAngle = calculateAngle(lShoulder, lElbow, lWrist);
+  // If hip is missing (e.g. waist up camera), calculate relative to a vertical drop from shoulder
+  const verticalRef = { x: lShoulder.x, y: lShoulder.y + 0.5 };
+  const shoulderAngle = lHip ? calculateAngle(lElbow, lShoulder, lHip) : calculateAngle(lElbow, lShoulder, verticalRef);
+
+  const ideal = IDEAL_FORMS.bicep_curls;
+  const scores = {
+    elbowAngle: scoreAngle(elbowAngle, ideal.elbowAngle),
+    shoulderAngle: scoreAngle(shoulderAngle, ideal.shoulderAngle)
+  };
+
+  const totalAccuracy = Math.round(
+    scores.elbowAngle * ideal.elbowAngle.weight +
+    scores.shoulderAngle * ideal.shoulderAngle.weight
+  );
+
+  return { accuracy: totalAccuracy, scores, feedback: ['Keep elbows tucked'], errors: [], angles: { elbowAngle, shoulderAngle } };
+};
+
+/**
  * Main form analysis function
  * Routes to the correct analyzer based on detected exercise
  */
@@ -218,6 +254,9 @@ export const analyzeForm = (keypoints, exercise, isReliable) => {
     case 'jumping_jacks':
       result = analyzeJumpingJacksForm(keypoints);
       break;
+    case 'bicep_curls':
+      result = analyzeBicepCurlsForm(keypoints);
+      break;
     case 'planks': {
       // Planks: score is just hold stability
       const plankErrors = detectPostureErrors('planks', { hipAngle: keypoints[11]?.y || 180 });
@@ -246,6 +285,7 @@ const REP_THRESHOLDS = {
   pushups:  { enter: 100, exit: 150, type: 'flexion' }, // elbow flexes
   lunges:   { enter: 110, exit: 150, type: 'flexion' }, // knee flexes
   jumping_jacks: { enter: 140, exit: 60, type: 'extension' }, // arms raise up
+  bicep_curls: { enter: 90, exit: 140, type: 'flexion' }, // elbow flexes
 };
 
 let repState = { phase: 'IDLE', reps: 0, lastRepTime: 0, repStartTime: 0 };
@@ -262,6 +302,7 @@ export const detectRep = (rawAngles, exercise) => {
   let primaryAngle = 180;
   if (exercise === 'pushups') primaryAngle = angles.elbowAngle || angles.leftElbow || 180;
   else if (exercise === 'jumping_jacks') primaryAngle = angles.shoulderAngle || angles.leftShoulder || 0;
+  else if (exercise === 'bicep_curls') primaryAngle = angles.elbowAngle || angles.leftElbow || 180;
   else primaryAngle = angles.kneeAngle || angles.frontKnee || angles.leftKnee || 180;
 
   const now = Date.now();

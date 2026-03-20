@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, Dimensions, TextInput } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import BottomNavBar from '../components/BottomNavBar';
 import api from '../services/api';
@@ -18,6 +18,8 @@ const PROVIDERS = [
 export default function DeviceIntegrationsScreen({ navigation }) {
   const [connected, setConnected] = useState([]);
   const [family, setFamily] = useState(null);
+  const [showJoinInput, setShowJoinInput] = useState(false);
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
 
   useEffect(() => {
     api.getConnectedDevices().then(d => { if (Array.isArray(d)) setConnected(d); }).catch(() => {});
@@ -44,6 +46,20 @@ export default function DeviceIntegrationsScreen({ navigation }) {
       setFamily(result.group);
       Alert.alert('Family Created!', `Invite Code: ${result.inviteCode}`);
     } catch (e) { console.log(e); }
+  };
+
+  const handleJoinFamily = async () => {
+    if (!inviteCodeInput.trim()) return Alert.alert('Error', 'Please enter an invite code');
+    try {
+      const result = await api.joinFamily(inviteCodeInput.trim().toUpperCase());
+      if (result.status === 'joined') {
+        Alert.alert('Success', `Joined family: ${result.groupName}`);
+        const famData = await api.getFamily();
+        if (famData && famData.family) setFamily(famData.family);
+      } else {
+        Alert.alert('Error', result.error || 'Failed to join family');
+      }
+    } catch (e) { Alert.alert('Error', 'Invalid invite code or already a member.'); }
   };
 
   return (
@@ -77,10 +93,34 @@ export default function DeviceIntegrationsScreen({ navigation }) {
             <Text style={s.familyMembers}>{family.members?.length || 0} members</Text>
             <Text style={s.familyCode}>Invite Code: {family.inviteCode}</Text>
           </View>
+        ) : showJoinInput ? (
+          <View style={s.familyCard}>
+            <TextInput 
+              style={s.input} 
+              placeholder="ENTER INVITE CODE" 
+              placeholderTextColor={COLORS.textMuted}
+              value={inviteCodeInput}
+              onChangeText={setInviteCodeInput}
+              autoCapitalize="characters"
+            />
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING.md}}>
+              <TouchableOpacity onPress={() => setShowJoinInput(false)} style={{padding: SPACING.sm}}>
+                <Text style={{color: COLORS.textMuted, fontSize: 10, fontWeight: '800'}}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.joinBtn} onPress={handleJoinFamily} disabled={!inviteCodeInput.trim()}>
+                <Text style={s.joinBtnText}>JOIN</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         ) : (
-          <TouchableOpacity style={s.createFamilyBtn} onPress={handleCreateFamily}>
-            <Text style={s.createFamilyText}>+ CREATE FAMILY GROUP</Text>
-          </TouchableOpacity>
+          <View style={{gap: SPACING.md}}>
+            <TouchableOpacity style={s.createFamilyBtn} onPress={handleCreateFamily}>
+              <Text style={s.createFamilyText}>+ CREATE FAMILY GROUP</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.createFamilyBtn, {borderColor: COLORS.textMuted}]} onPress={() => setShowJoinInput(true)}>
+              <Text style={[s.createFamilyText, {color: COLORS.textMuted}]}>JOIN EXISTING FAMILY</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* MFA Status */}
@@ -142,6 +182,9 @@ const s = StyleSheet.create({
   familyCode: { fontSize: FONT.sizes.sm, color: COLORS.primaryContainer, fontWeight: '600', marginTop: SPACING.sm },
   createFamilyBtn: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xxl, padding: SPACING.xl, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   createFamilyText: { color: COLORS.primaryContainer, fontWeight: '700', fontSize: FONT.sizes.sm, letterSpacing: 1 },
+  input: { backgroundColor: COLORS.surfaceElevated, borderRadius: RADIUS.md, padding: SPACING.lg, color: COLORS.textPrimary, fontSize: 14, fontWeight: '700', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', letterSpacing: 2, textAlign: 'center' },
+  joinBtn: { backgroundColor: COLORS.primaryContainer, borderRadius: RADIUS.md, padding: SPACING.sm, paddingHorizontal: SPACING.xl, alignItems: 'center', justifyContent: 'center' },
+  joinBtnText: { color: COLORS.background, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   mfaCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.xxl, padding: SPACING.xl, borderWidth: 1, borderColor: COLORS.border },
   mfaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   mfaTitle: { fontSize: FONT.sizes.sm, color: COLORS.textPrimary, fontWeight: '600' },

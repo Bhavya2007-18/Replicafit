@@ -146,6 +146,23 @@ const EXERCISE_PATTERNS = {
       return 0;
     },
   },
+
+  bicep_curls: {
+    detect: (angles, orientation) => {
+      // Allow upright or unknown (if hips cut off)
+      if (orientation === 'horizontal') return 0;
+      const lElbow = angles.leftElbow || 180;
+      const rElbow = angles.rightElbow || 180;
+      const lShoulder = angles.leftShoulder || 0;
+      const rShoulder = angles.rightShoulder || 0;
+      
+      // Bicep curl: elbows bending, shoulders relatively stable (arms at side)
+      if ((lElbow < 140 || rElbow < 140) && (lShoulder < 50 && rShoulder < 50)) return 0.9;
+      if ((lElbow < 160 || rElbow < 160) && (lShoulder < 50 && rShoulder < 50)) return 0.6;
+      if (lShoulder < 50 && rShoulder < 50) return 0.35; // Base score for arms tucked
+      return 0.1;
+    },
+  },
 };
 
 /**
@@ -211,6 +228,7 @@ export const getExerciseDisplayName = (exercise) => {
     lunges: 'Lunges',
     planks: 'Plank',
     jumping_jacks: 'Jumping Jacks',
+    bicep_curls: 'Bicep Curls',
   };
   return names[exercise] || 'Detecting...';
 };

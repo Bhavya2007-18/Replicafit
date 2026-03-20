@@ -1,23 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Modal, Image } from 'react-native';
 import { WebView } from 'react-native-webview';
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { exerciseDatabase as exercises } from '../data/exerciseDatabase';
 
 const { width } = Dimensions.get('window');
 
 export default function ExerciseDetailScreen({ route, navigation }) {
-  const { exerciseId } = route.params;
-  const ex = exercises.find(e => e.id === exerciseId);
-  const [showVideoModal, setShowVideoModal] = useState(false);
-  
-  if (!ex) return null;
   const { exerciseId, exercise: passedExercise } = route.params;
   const ex = passedExercise || exercises.find(e => e.id === exerciseId || e._id === exerciseId);
-  const [expandedPhase, setExpandedPhase] = React.useState(null);
-  const [expandedMistake, setExpandedMistake] = React.useState(null);
+  
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [expandedPhase, setExpandedPhase] = useState(null);
+  const [expandedMistake, setExpandedMistake] = useState(null);
 
   if (!ex) return (
     <SafeAreaView style={s.container}>
