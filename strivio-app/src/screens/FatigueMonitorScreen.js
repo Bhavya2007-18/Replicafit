@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { COLORS, SPACING, RADIUS, FONT } from '../theme/colors';
 import { collectSignals, resetSignalCollector } from '../services/signalCollector';
-import { computeFatigueScore, generateFeedback, analyzeExerciseQuality, getRecoveryRecommendation } from '../../../strivio_core_engine/fatigueModel';
+import { computeFatigueScore, generateFeedback, analyzeExerciseQuality, getRecoveryRecommendation } from '../strivio_core_engine/fatigueModel';
 
 const { width } = Dimensions.get('window');
 
