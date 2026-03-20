@@ -1,139 +1,96 @@
 /**
- * Signal Collector Service
- * Collects HR/HRV from smart band and pose estimation data from camera
+ * Signal Collector Service - DEMO READY VERSION
+ * 
+ * Collects HR/HRV from smart band (simulated for demo) and pose estimation 
+ * data from camera to feed into the fatigue monitoring system.
+ * 
+ * DEMO MODE: Uses mock signals for presentation. In production, replace
+ * with real Fitbit/Garmin APIs + MediaPipe pose detection.
  */
-
-import { requestHealthData } from './healthConnect';
 
 // Simulated baseline values (in production, these come from user profile)
 const USER_BASELINE_HR = 70;
-const USER_BASELINE_HRV = 55;
+const USER_BASELINE_HRV = 50;
 
 /**
- * Collect signals from smart band and camera
- * @returns {Promise<Object>} Collected signals
+ * DEMO: Collect mock signals for presentation
+ * In production, this fetches from smart band + MediaPipe
+ * 
+ * @returns {Promise<Object>} Collected biometric signals
  */
 export async function collectSignals() {
-  try {
-    // Fetch HR/HRV from smart band via Health Connect
-    const healthData = await requestHealthData();
-    
-    // Get pose estimation data from MediaPipe (via global or context)
-    const poseData = getLatestPoseData();
-    
-    // Calculate rep speed from recent reps
-    const repSpeed = calculateRepSpeed();
-    
-    // Calculate ROM from pose angles
-    const rom = calculateRangeOfMotion(poseData);
-    
-    return {
-      hr: healthData.heartRate || USER_BASELINE_HR,
-      hrv: healthData.hrv || USER_BASELINE_HRV,
-      baselineHR: USER_BASELINE_HR,
-      baselineHRV: USER_BASELINE_HRV,
-      repSpeed,
-      rom,
-      timestamp: Date.now()
-    };
-  } catch (error) {
-    console.error('Error collecting signals:', error);
-    // Return default values on error
-    return {
-      hr: USER_BASELINE_HR,
-      hrv: USER_BASELINE_HRV,
-      baselineHR: USER_BASELINE_HR,
-      baselineHRV: USER_BASELINE_HRV,
-      repSpeed: 0.8,
-      rom: 70,
-      timestamp: Date.now(),
-      error: error.message
-    };
-  }
-}
-
-/**
- * Get latest pose data from MediaPipe detection
- * @returns {Object} Pose keypoints and angles
- */
-function getLatestPoseData() {
-  // In production, this reads from global state or context
-  // where MediaPipe stores the latest detection
-  if (global.latestPoseData) {
-    return global.latestPoseData;
-  }
+  // Simulate API latency for realistic demo
+  await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Default mock data for testing
+  // DEMO: Simulated live signals showing fatigue indicators
+  // HR elevated above baseline (+25 BPM indicates stress)
+  // HRV dropped from baseline (40 vs 50 indicates autonomic fatigue)
+  // Rep speed slowed (0.4 reps/sec vs normal 0.8)
+  // ROM reduced (25° vs normal 70° indicates joint fatigue)
+  
   return {
-    keypoints: [],
-    angles: {},
+    hr: 95,              // Elevated heart rate (baseline: 70)
+    hrv: 40,             // HRV drop (baseline: 50)
+    baselineHR: USER_BASELINE_HR,
+    baselineHRV: USER_BASELINE_HRV,
+    repSpeed: 0.4,       // Slower reps indicating muscular fatigue
+    rom: 25,             // Reduced range of motion
     timestamp: Date.now()
   };
 }
 
 /**
- * Calculate rep speed based on recent timestamps
- * @returns {number} Reps per second
+ * DEMO: Collect fresh signals (high fatigue state)
+ * Use this to show the "FRESH" state in demo
  */
-function calculateRepSpeed() {
-  // In production, this analyzes rep timestamps
-  // For now, return a mock value
-  const repTimestamps = global.repTimestamps || [];
+export async function collectFreshSignals() {
+  await new Promise(resolve => setTimeout(resolve, 500));
   
-  if (repTimestamps.length < 2) {
-    return 0.8; // Default moderate speed
-  }
-  
-  const recentReps = repTimestamps.slice(-5);
-  const timeDiff = recentReps[recentReps.length - 1] - recentReps[0];
-  const repCount = recentReps.length - 1;
-  
-  if (timeDiff <= 0) return 0.8;
-  
-  return repCount / (timeDiff / 1000); // reps per second
+  return {
+    hr: 72,              // Near baseline
+    hrv: 52,             // Good HRV
+    baselineHR: USER_BASELINE_HR,
+    baselineHRV: USER_BASELINE_HRV,
+    repSpeed: 0.9,       // Fast reps
+    rom: 75,             // Full ROM
+    timestamp: Date.now()
+  };
 }
 
 /**
- * Calculate range of motion from pose angles
- * @param {Object} poseData - Pose estimation data
- * @returns {number} ROM in degrees
+ * DEMO: Collect moderate fatigue signals
+ * Use this to show the "MODERATE" state in demo
  */
-function calculateRangeOfMotion(poseData) {
-  if (!poseData || !poseData.angles) {
-    return 70; // Default moderate ROM
-  }
+export async function collectModerateSignals() {
+  await new Promise(resolve => setTimeout(resolve, 500));
   
-  const angles = poseData.angles;
-  
-  // Example: For squats, check knee angle range
-  if (angles.leftKnee && angles.rightKnee) {
-    const kneeRom = Math.abs(angles.leftKnee - angles.rightKnee);
-    return Math.min(180, kneeRom);
-  }
-  
-  // For pushups, check elbow angle range
-  if (angles.leftElbow && angles.rightElbow) {
-    const elbowRom = Math.abs(angles.leftElbow - angles.rightElbow);
-    return Math.min(180, elbowRom);
-  }
-  
-  return 70; // Default
+  return {
+    hr: 85,              // Slightly elevated
+    hrv: 45,             // Slight HRV drop
+    baselineHR: USER_BASELINE_HR,
+    baselineHRV: USER_BASELINE_HRV,
+    repSpeed: 0.6,       // Moderate speed
+    rom: 55,             // Slight ROM reduction
+    timestamp: Date.now()
+  };
 }
 
 /**
- * Store rep timestamp for speed calculation
- * @param {number} timestamp - Rep completion timestamp
+ * DEMO: Collect critical fatigue signals
+ * Use this to show the "CRITICAL" state in demo
  */
-export function recordRep(timestamp = Date.now()) {
-  if (!global.repTimestamps) {
-    global.repTimestamps = [];
-  }
-  global.repTimestamps.push(timestamp);
+export async function collectCriticalSignals() {
+  await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Keep only last 10 timestamps
-  if (global.repTimestamps.length > 10) {
-    global.repTimestamps.shift();
-  }
+  return {
+    hr: 110,             // Very elevated HR
+    hrv: 30,             // Significant HRV drop
+    baselineHR: USER_BASELINE_HR,
+    baselineHRV: USER_BASELINE_HRV,
+    repSpeed: 0.25,      // Very slow reps
+    rom: 15,             // Severely limited ROM
+    timestamp: Date.now()
+  };
 }
 
 /**
