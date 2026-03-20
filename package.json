@@ -1,0 +1,11 @@
+{
+  "name": "strivio-root",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npm run start --prefix strivio-app -- --clear",
+    "mobile": "set EXPO_PACKAGER_HOSTNAME=192.168.0.122 && npm run start --prefix strivio-app -- --host lan --clear",
+    "tunnel": "npm run start --prefix strivio-app -- --tunnel --clear",
+    "backend": "npm start --prefix strivio-backend",
+    "dev": "npm run backend & npm run start"
+  }
+}
