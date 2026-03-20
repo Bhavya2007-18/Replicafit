@@ -20,13 +20,24 @@ class Squat(BaseExercise):
         return calculate_angle(shoulder, hip, knee)
 
     def get_stage(self, angle, previous_angle):
-        if angle > 170:
-            return "up"
-        elif 90 < angle <= 170:
-            return "middle"
-        elif angle <= 90:
+        if self.current_stage == "up":
+            if angle > 160:
+                return "up"
+            elif angle > 140:
+                return "middle"
             return "down"
-        return "middle"
+        elif self.current_stage == "down":
+            if angle <= 100:
+                return "down"
+            elif angle < 120:
+                return "middle"
+            return "up"
+        else:
+            if angle > 155:
+                return "up"
+            elif angle <= 95:
+                return "down"
+            return "middle"
 
     def calculate_accuracy(self, landmarks, frame_width, frame_height):
         hip_l = get_landmark_coords(

@@ -25,13 +25,24 @@ class Plank(BaseExercise):
         return calculate_angle(shoulder, hip, ankle)
 
     def get_stage(self, angle, previous_angle):
-        if angle >= 160:
-            return "up"
-        elif 120 <= angle < 160:
-            return "good"
-        elif angle < 120:
+        if self.current_stage == "up":
+            if angle >= 155:
+                return "up"
+            elif angle >= 145:
+                return "good"
             return "dropped"
-        return "good"
+        elif self.current_stage == "dropped":
+            if angle < 125:
+                return "dropped"
+            elif angle < 135:
+                return "good"
+            return "up"
+        else:
+            if angle >= 155:
+                return "up"
+            elif angle < 130:
+                return "dropped"
+            return "good"
 
     def calculate_accuracy(self, landmarks, frame_width, frame_height):
         shoulder_l = get_landmark_coords(
