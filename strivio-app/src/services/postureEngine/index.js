@@ -27,13 +27,20 @@ const POSTURE_RULES = {
     },
     spine: {
       check: (angles) => {
-        // Spine angle = shoulder-hip-knee; ideal > 160° (near straight)
-        const spineAngle = angles.hipAngle || 180;
-        return spineAngle < 140;
+        const backAngle = angles.backAngle || 0;
+        return backAngle > 45; // Lean forward more than 45 degrees
       },
       issue: 'excessive forward lean',
       correction: 'Keep your chest up and core tight',
-      getSeverity: (angles) => Math.min((140 - (angles.hipAngle || 180)) / 40, 1),
+      getSeverity: (angles) => Math.min((angles.backAngle - 45) / 30, 1),
+    }
+  },
+  jumping_jacks: {
+    arms: {
+      check: (angles) => angles.shoulderAngle > 40 && angles.shoulderAngle < 130,
+      issue: 'arms too low',
+      correction: 'Raise your arms fully overhead',
+      getSeverity: (angles) => Math.min((130 - angles.shoulderAngle) / 90, 1),
     }
   },
   pushups: {

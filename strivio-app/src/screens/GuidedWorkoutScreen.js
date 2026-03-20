@@ -106,15 +106,22 @@ export default function GuidedWorkoutScreen({ navigation }) {
   };
 
   const startAnalysisLoop = () => {
+    let isProcessing = false;
+
     analysisRef.current = setInterval(async () => {
-      if (!isActiveRef.current || !cameraRef.current) return;
+      if (!isActiveRef.current || !cameraRef.current || isProcessing) return;
+      isProcessing = true;
+
       try {
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0, // Min quality for max speed
           skipProcessing: true,
-          base64: false,
+          base64: true,
         });
-        if (!photo) return;
+        if (!photo) {
+          isProcessing = false;
+          return;
+        }
 
         const { keypoints: kps, isReliable, avgConfidence } = await detectPose(photo);
         if (kps.length > 0) {
@@ -145,7 +152,10 @@ export default function GuidedWorkoutScreen({ navigation }) {
               }
             }
             setReps(repResult.reps);
-            if (classification.angles) recordAnglesForROM(classification.angles);
+            if (classification.angles) {
+              recordAnglesForROM(classification.angles);
+              calculateSymmetry(classification.angles);
+            }
           }
 
           if (enablePostureCorrection && formResult.errors && formResult.errors.length > 0) {
@@ -160,15 +170,18 @@ export default function GuidedWorkoutScreen({ navigation }) {
               exercise: classification.exercise || 'tracking',
               reps: reps,
               accuracy: formResult.accuracy,
-              fatigue: fatigue?.fatigue_level || fatigueLevel,
+              fatigue: fatigueLevel,
             });
           }
         } else if (!isReliable) {
           setFeedback('MOVE INTO FRAME');
           setIsPaused(true);
         }
-      } catch (e) {}
-    }, 200);
+      } catch (e) {
+      } finally {
+        isProcessing = false;
+      }
+    }, 250); // Process up to 4 frames a second
   };
 
   const stopWorkout = async () => {
