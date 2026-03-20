@@ -7,5 +7,12 @@
     "tunnel": "npm run start --prefix strivio-app -- --tunnel --clear",
     "backend": "npm start --prefix strivio-backend",
     "dev": "npm run backend & npm run start"
+  },
+  "dependencies": {
+    "expo": "^55.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.10",
+    "typescript": "~5.9.2"
   }
 }
