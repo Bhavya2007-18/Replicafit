@@ -169,7 +169,7 @@ export default function ExerciseDetailScreen({ route, navigation }) {
       </View>
 
       {/* Video Modal - Only show on mobile platforms */}
-      {Platform.OS !== 'web' && (
+      {Platform.OS !== 'web' && showVideoModal && (
         <Modal
           visible={showVideoModal}
           animationType="slide"
@@ -190,6 +190,17 @@ export default function ExerciseDetailScreen({ route, navigation }) {
                 mediaPlaybackRequiresUserAction={false}
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
+                startInLoadingState={true}
+                renderLoading={() => (
+                  <View style={s.loadingContainer}>
+                    <Text style={s.loadingText}>Loading video...</Text>
+                  </View>
+                )}
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.error('WebView error: ', nativeEvent);
+                  setShowVideoModal(false);
+                }}
               />
             )}
           </View>
@@ -369,5 +380,16 @@ const s = StyleSheet.create({
   },
   webView: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
   },
 });

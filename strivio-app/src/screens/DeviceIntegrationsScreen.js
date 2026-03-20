@@ -33,10 +33,31 @@ export default function DeviceIntegrationsScreen({ navigation }) {
       try {
         await api.disconnectDevice(provider);
         setConnected(prev => prev.filter(d => d.provider !== provider));
-      } catch (e) { console.log(e); }
+        Alert.alert('Device Disconnected', `${provider} has been disconnected successfully.`);
+      } catch (e) { 
+        console.log(e);
+        Alert.alert('Error', 'Failed to disconnect device. Please try again.');
+      }
     } else {
-      // In production, this would open an OAuth flow
-      Alert.alert('Connect ' + provider, 'OAuth integration coming soon! The backend endpoint is ready.');
+      // Simulate connection for demo purposes
+      Alert.alert(
+        'Connect ' + provider, 
+        `Would you like to connect ${provider}? This is a demo connection.`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Connect',
+            onPress: () => {
+              // Simulate successful connection
+              setConnected(prev => [...prev, { provider, connectedAt: new Date().toISOString() }]);
+              Alert.alert('Connected!', `${provider} has been connected successfully.`);
+            }
+          }
+        ]
+      );
     }
   };
 
