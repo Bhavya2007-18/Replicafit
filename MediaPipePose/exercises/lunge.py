@@ -25,13 +25,24 @@ class Lunge(BaseExercise):
         return calculate_angle(hip, knee, ankle)
 
     def get_stage(self, angle, previous_angle):
-        if angle > 165:
-            return "up"
-        elif 80 < angle <= 165:
-            return "middle"
-        elif angle <= 80:
+        if self.current_stage == "up":
+            if angle > 155:
+                return "up"
+            elif angle > 130:
+                return "middle"
             return "down"
-        return "middle"
+        elif self.current_stage == "down":
+            if angle <= 90:
+                return "down"
+            elif angle < 110:
+                return "middle"
+            return "up"
+        else:
+            if angle > 150:
+                return "up"
+            elif angle <= 85:
+                return "down"
+            return "middle"
 
     def calculate_accuracy(self, landmarks, frame_width, frame_height):
         hip_l = get_landmark_coords(

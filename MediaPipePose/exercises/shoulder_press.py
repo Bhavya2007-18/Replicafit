@@ -20,13 +20,24 @@ class ShoulderPress(BaseExercise):
         return calculate_angle(wrist, elbow, shoulder)
 
     def get_stage(self, angle, previous_angle):
-        if angle > 160:
+        if self.current_stage == "up":
+            if angle > 160:
+                return "down"
+            elif angle > 45:
+                return "middle"
             return "up"
-        elif 90 < angle <= 160:
-            return "middle"
-        elif angle <= 90:
+        elif self.current_stage == "down":
+            if angle <= 35:
+                return "up"
+            elif angle < 145:
+                return "middle"
             return "down"
-        return "middle"
+        else:
+            if angle > 155:
+                return "down"
+            elif angle <= 35:
+                return "up"
+            return "middle"
 
     def calculate_accuracy(self, landmarks, frame_width, frame_height):
         elbow_l = get_landmark_coords(
