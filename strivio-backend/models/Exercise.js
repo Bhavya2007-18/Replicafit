@@ -9,6 +9,8 @@ const exerciseSchema = new mongoose.Schema({
   commonMistakes: [String],
   imageUrl: String,
   category: { type: String, enum: ['strength', 'cardio', 'flexibility', 'balance'] },
+  tutorialUrl: String,
+  videoPreviewUrl: String
 }, { timestamps: true });
 
 module.exports = mongoose.model('Exercise', exerciseSchema);

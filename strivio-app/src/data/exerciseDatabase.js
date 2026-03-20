@@ -11,6 +11,12 @@ export const exerciseDatabase = [
       { text: 'Push through your heels to return to the starting position.', image: 'https://tse1.mm.bing.net/th?q=squat+standing+up+power' }
     ],
     commonMistakes: [
+      'Knees caving inwards.',
+      'Rounding the lower back.',
+      'Lifting heels off the ground.'
+    ],
+    tutorialUrl: 'https://www.youtube.com/watch?v=aclHkVaku9U',
+    videoPreviewUrl: 'https://img.youtube.com/vi/aclHkVaku9U/0.jpg'
       { text: 'Knees caving inwards.', image: 'https://tse1.mm.bing.net/th?q=squat+mistake+knees+caving+valgus' },
       { text: 'Rounding the lower back.', image: 'https://tse1.mm.bing.net/th?q=squat+mistake+rounded+back+butt+wink' },
       { text: 'Lifting heels off the ground.', image: 'https://tse1.mm.bing.net/th?q=squat+mistake+heels+lifting' }
